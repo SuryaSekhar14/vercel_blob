@@ -1,6 +1,7 @@
 import requests
 import os
 
+
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
 _API_VERSION = '7'
 _PAGINATED_LIST_SIZE = 1000
@@ -8,14 +9,14 @@ _DEFAULT_CACHE_AGE = '31536000'
 _DEBUG = os.environ.get('DEBUG', False)
 
 
-
-def _get_auth_token_from_env():
+def _get_auth_token_from_env() -> str:
     token = os.environ.get('BLOB_READ_WRITE_TOKEN')
 
     if not token:
         raise Exception('BLOB_READ_WRITE_TOKEN environment variable not set')
     
     return token
+
 
 def _response_handler(resp: requests.Response) -> dict:
     if resp.status_code == 200:
