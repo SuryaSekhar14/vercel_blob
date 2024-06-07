@@ -72,7 +72,7 @@ blobs = vercel_blob.blob_store.list({
 
 ### Upload File / Blob to the Storage
 
-The put method can be used to upload a blob to the blob store.
+The put method can be used to upload a blob to the blob store. If the blob is already present in the store, it will be overwritten.
 
 ```python
 def upload_a_blob():
@@ -144,7 +144,7 @@ If the blob url provided is not valid, an Exception will be thrown.
 
 ### Copy blob from one folder to another
 
-The copy method can be used to copy an existing blob to another location inside the same blob store
+The copy method can be used to copy an existing blob to another location inside the same blob store. Note that the addRandomSuffix option is False by default for copy operations, hence it overwrites by default. To prevent this behavior, you can set the 'addRandomSuffix' option to "true".
 
 ```python
 def copy_a_blob():
