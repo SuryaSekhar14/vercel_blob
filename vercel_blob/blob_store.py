@@ -89,7 +89,7 @@ def put(path: str, data: bytes, options: dict = {}) -> dict:
         "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
         "Content-Type": "application/octet-stream",
-        "cacheControlMaxAge": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
+        "x-cache-control-max-age": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
     }
 
     if options.get('addRandomSuffix') == "false":
@@ -146,4 +146,29 @@ def delete(url: any, options: dict = {}) -> dict:
         raise Exception('url must be a string or a list of strings')
 
     
+def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
+    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+
+    headers = {
+        "access": "public",
+        "authorization": f'Bearer {_get_auth_token(options)}',
+        "x-api-version": _API_VERSION,
+        "Content-Type": "application/octet-stream",
+        "x-cache-control-max-age": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
+    }
+
+    if options.get('addRandomSuffix') == "true":
+        headers['x-add-random-suffix'] = "true"
+
+    if _DEBUG: print(headers)
+    to_path_encoded = requests.utils.quote(to_path)
+    resp = _request_factory(
+        f"{_VERCEL_BLOB_API_BASE_URL}/{to_path_encoded}",
+        'PUT',
+        headers=headers,
+        params={"fromUrl": blob_url},
+    )
+
+    return _response_handler(resp)
+
 
