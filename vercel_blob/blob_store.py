@@ -20,6 +20,15 @@ def _get_auth_token_from_env() -> str:
     return token
 
 
+def _get_auth_token(options: dict) -> str:
+    try:
+        _tkn = options['token']
+    except KeyError:
+        _tkn = _get_auth_token_from_env()
+
+    return _tkn
+
+
 def _request_factory(url: str, method: str, backoff_factor: int = 0.5, status_forcelist: list = [502, 503, 504], timeout: int = 10, **kwargs) -> requests.Response:
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
         try:
@@ -41,26 +50,23 @@ def _response_handler(resp: requests.Response) -> dict:
         raise Exception(f"An error occoured: {resp.json()}")
 
 
-def list(opts: dict = {}) -> dict:
-    try:
-        _tkn = opts['token']
-    except KeyError:
-        _tkn = _get_auth_token_from_env()
+def list(options: dict = {}) -> dict:
+    assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
-        "authorization": f'Bearer {_tkn}',
+        "authorization": f'Bearer {_get_auth_token(options)}',
     }
 
     params = {
-        "limit": opts.get('limit', str(_PAGINATED_LIST_SIZE)),
+        "limit": options.get('limit', str(_PAGINATED_LIST_SIZE)),
     }
 
-    if opts.get('prefix'):
-        params['prefix'] = opts['prefix']
-    if opts.get('cursor'):
-        params['cursor'] = opts['cursor']
-    if opts.get('mode'):
-        params['mode'] = opts['mode']
+    if options.get('prefix'):
+        params['prefix'] = options['prefix']
+    if options.get('cursor'):
+        params['cursor'] = options['cursor']
+    if options.get('mode'):
+        params['mode'] = options['mode']
 
     if _DEBUG: print(headers)
     resp = _request_factory(
@@ -73,21 +79,20 @@ def list(opts: dict = {}) -> dict:
     return _response_handler(resp)
 
 
-def put(path: str, data: bytes, opts: dict = {}) -> dict:
-    try:
-        _tkn = opts['token']
-    except KeyError:
-        _tkn = _get_auth_token_from_env()
+def put(path: str, data: bytes, options: dict = {}) -> dict:
+    assert type(path) == type(""), "path must be a string object"
+    assert type(data) == type(b""), "data must be a bytes object"
+    assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
         "access": "public",  # Support for private is not yet there, according to Vercel docs at time of writing this code
-        "authorization": f'Bearer {_tkn}',
+        "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
         "Content-Type": "application/octet-stream",
-        "cacheControlMaxAge": opts.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
+        "cacheControlMaxAge": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
     }
 
-    if opts.get('addRandomSuffix') == "false":
+    if options.get('addRandomSuffix') == "false":
         headers['x-add-random-suffix'] = "false"
 
     if _DEBUG: print(headers)
@@ -101,14 +106,12 @@ def put(path: str, data: bytes, opts: dict = {}) -> dict:
     return _response_handler(resp)
 
 
-def head(url: str, opts: dict = {}) -> dict:
-    try:
-        _tkn = opts['token']
-    except KeyError:
-        _tkn = _get_auth_token_from_env()
+def head(url: str, options: dict = {}) -> dict:
+    assert type(url) == type(""), "url must be a string object"
+    assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
-        "authorization": f'Bearer {_tkn}',
+        "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
     }
 
@@ -122,18 +125,15 @@ def head(url: str, opts: dict = {}) -> dict:
     return _response_handler(resp)
 
 
-def delete(url: any, opts: dict = {}) -> dict:
-    try:
-        _tkn = opts['token']
-    except KeyError:
-        _tkn = _get_auth_token_from_env()
+def delete(url: any, options: dict = {}) -> dict:
+    assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
-        "authorization": f'Bearer {_tkn}',
+        "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
     }
 
-    if type(url) == type("") or type(url) == type([]):
+    if type(url) == type("") or (type(url) == type([]) and all(isinstance(u, str) for u in url)):
         if _DEBUG: print(headers)
         resp = _request_factory(
             f"{_VERCEL_BLOB_API_BASE_URL}/delete",
