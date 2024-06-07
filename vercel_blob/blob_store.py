@@ -1,6 +1,7 @@
 import requests
 import os
 import time
+from mimetypes import guess_type
 
 
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
@@ -28,6 +29,14 @@ def _get_auth_token(options: dict) -> str:
 
     return _tkn
 
+
+def _guess_mime_type(url) -> str:
+    mime_type, _ = guess_type(url, strict=False)
+
+    if mime_type:
+        return mime_type
+    else:
+        return "application/octet-stream"
 
 def _request_factory(url: str, method: str, backoff_factor: int = 0.5, status_forcelist: list = [502, 503, 504], timeout: int = 10, **kwargs) -> requests.Response:
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
@@ -68,7 +77,7 @@ def list(options: dict = {}) -> dict:
     if options.get('mode'):
         params['mode'] = options['mode']
 
-    if _DEBUG: print(headers)
+    if _DEBUG: print("Headers: " + str(headers))
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}",
         'GET',
@@ -88,14 +97,14 @@ def put(path: str, data: bytes, options: dict = {}) -> dict:
         "access": "public",  # Support for private is not yet there, according to Vercel docs at time of writing this code
         "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
-        "Content-Type": "application/octet-stream",
+        "x-content-type": _guess_mime_type(path),
         "x-cache-control-max-age": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
     }
 
-    if options.get('addRandomSuffix') == "false":
-        headers['x-add-random-suffix'] = "false"
+    if options.get('addRandomSuffix') in ("false", False, "0"):
+        headers['x-add-random-suffix'] = "0"
 
-    if _DEBUG: print(headers)
+    if _DEBUG: print("Headers: " + str(headers))
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/{path}",
         'PUT',
@@ -115,7 +124,7 @@ def head(url: str, options: dict = {}) -> dict:
         "x-api-version": _API_VERSION,
     }
 
-    if _DEBUG: print(headers)
+    if _DEBUG: print("Headers: " + str(headers))
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/?url={url}",
         'GET',
@@ -134,7 +143,7 @@ def delete(url: any, options: dict = {}) -> dict:
     }
 
     if type(url) == type("") or (type(url) == type([]) and all(isinstance(u, str) for u in url)):
-        if _DEBUG: print(headers)
+        if _DEBUG: print("Headers: " + str(headers))
         resp = _request_factory(
             f"{_VERCEL_BLOB_API_BASE_URL}/delete",
             'POST',
@@ -153,14 +162,14 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
         "access": "public",
         "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
-        "Content-Type": "application/octet-stream",
+        "x-content-type": _guess_mime_type(blob_url),
         "x-cache-control-max-age": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
     }
 
-    if options.get('addRandomSuffix') == "true":
-        headers['x-add-random-suffix'] = "true"
+    if options.get('addRandomSuffix') != None:
+        headers['x-add-random-suffix'] = "1"
 
-    if _DEBUG: print(headers)
+    if _DEBUG: print("Headers: " + str(headers))
     to_path_encoded = requests.utils.quote(to_path)
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/{to_path_encoded}",
