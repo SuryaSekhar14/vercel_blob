@@ -80,7 +80,7 @@ def list(options: dict = {}) -> dict:
         AssertionError: If the options parameter is not a dictionary object.
 
     """
-
+    
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
@@ -209,7 +209,7 @@ def delete(url: any, options: dict = {}) -> dict:
     Raises:
         Exception: If the url parameter is not a string or a list of strings.
     """
-    
+
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
