@@ -41,7 +41,7 @@ The list method will return a list of all files in the blob storage. You can pas
 
 ```python
 def list_all_blobs():
-    blobs = vercel_blob.blob_store.list({
+    blobs = vercel_blob.list({
         'limit': '5',
     })
 ```
@@ -64,7 +64,7 @@ folders?: `string[]`
 For a long list of blob objects (the default list limit is 1000), you can use the cursor and hasMore parameters to paginate through the results as shown in the example below:
 
 ```python
-blobs = vercel_blob.blob_store.list({
+blobs = vercel_blob.list({
         'limit': '4',
         'cursor': cursor,
     })
@@ -77,7 +77,7 @@ The put method can be used to upload a blob to the blob store. If the blob is al
 ```python
 def upload_a_blob():
     with open('file.txt', 'rb') as f:
-        resp = vercel_blob.blob_store.put('test.txt', f.read())
+        resp = vercel_blob.put('test.txt', f.read())
         print(resp)
 ```
 
@@ -97,7 +97,7 @@ You would notice that the blob uploaded automatically has a random suffix attach
 ```python
 def upload_a_blob():
     with open('file.txt', 'rb') as f:
-        resp = vercel_blob.blob_store.put('test.txt', f.read(), {
+        resp = vercel_blob.put('test.txt', f.read(), {
                 "addRandomSuffix": "false",
             })
         print(resp)
@@ -109,7 +109,7 @@ The delete method will delete a file from the Blob Storage. It takes in the URL 
 
 ```python
 def delete_a_list_of_blobs():
-    resp = vercel_blob.blob_store.delete([
+    resp = vercel_blob.delete([
             'blob_url_1',
             'blob_url_2'
         ])
@@ -124,7 +124,7 @@ The head method will return the blob object's metadata.
 
 ```python
 def get_blob_metadata():
-    resp = vercel_blob.blob_store.head('blob_url')
+    resp = vercel_blob.head('blob_url')
     print(resp)
 ```
 
@@ -148,7 +148,7 @@ The copy method can be used to copy an existing blob to another location inside 
 
 ```python
 def copy_a_blob():
-    resp = vercel_blob.blob_store.copy("https://blobstore.public.blob.vercel-storage.com/test.txt", "new-folder/test.txt")
+    resp = vercel_blob.copy("https://blobstore.public.blob.vercel-storage.com/test.txt", "new-folder/test.txt")
     print(resp)
 ```
 
@@ -161,3 +161,13 @@ The JSON representation of the response should look something like this:
   downloadUrl: `string`
 ```
 
+### Download a file on the server
+
+If you want to make the client download a file, you just redirect him to the downloadUrl. But for the server, you can use the download_file() method.
+
+```python
+def download_a_file_on_the_server():
+    vercel_blob.download_file('blob_url', 'path/to/directory/', {'token': 'my_token'})
+```
+
+The file will be downloaded to the specified directory. If no directory is specified, it will be downloaded to the program's base directory.
