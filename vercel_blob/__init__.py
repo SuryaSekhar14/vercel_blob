@@ -19,6 +19,8 @@ def list(options: dict = {}) -> dict:
     Raises:
         AssertionError: If the options parameter is not a dictionary object.
 
+    Example:
+        >>> list({"limit": "4", "cursor": "cursor_string_here"})
     """
         
     return blob_store.list(options)
@@ -44,6 +46,10 @@ def put(path: str, data: bytes, options: dict = {}) -> dict:
         AssertionError: If the type of `path` is not a string object.
         AssertionError: If the type of `data` is not a bytes object.
         AssertionError: If the type of `options` is not a dictionary object.
+
+    Example:
+        >>> with open('test.txt', 'rb') as f:
+        >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"})
     """
 
     return blob_store.put(path, data, options)
@@ -65,6 +71,9 @@ def head(url: str, options: dict = {}) -> dict:
     Raises:
         AssertionError: If the `url` argument is not a string object.
         AssertionError: If the `options` argument is not a dictionary object.
+
+    Example:
+        >>> head("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
     
     return blob_store.head(url, options)
@@ -85,12 +94,16 @@ def delete(url: any, options: dict = {}) -> dict:
 
     Raises:
         Exception: If the url parameter is not a string or a list of strings.
+
+    Example:
+        >>> delete("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
 
     return blob_store.delete(url, options)
 
 
 def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
+
     """
     Copy a blob from a source URL to a destination path inside the blob store.
 
@@ -113,3 +126,45 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
     """
 
     return blob_store.copy(blob_url, to_path, options)
+
+
+def download_file(url: str, path: str = None, options: dict = {}):
+    """
+    Copy a blob from a source URL to a destination path inside the blob store.
+
+    Args:
+        blob_url (str): The URL of the source blob.
+        to_path (str): The destination path where the blob will be copied to.
+        options (dict, optional): Additional options for the copy operation. Defaults to {}.
+
+            -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
+            -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
+            -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "false" for copy operation.
+
+    Returns:
+        dict: The response from the copy operation.
+
+    Raises:
+        AssertionError: If the blob_url parameter is not a string object.
+        AssertionError: If the to_path parameter is not a string object.
+        AssertionError: If the options parameter is not a dictionary object.
+
+    Example:
+        >>> copy("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "copy-test/test.txt", {"addRandomSuffix": "false"})
+    """
+
+    return blob_store.download_file(url, path, options)
+
+
+
+
+
+
+
+
+
+
+
+
+
+

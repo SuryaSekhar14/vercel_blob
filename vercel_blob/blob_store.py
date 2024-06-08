@@ -79,8 +79,10 @@ def list(options: dict = {}) -> dict:
     Raises:
         AssertionError: If the options parameter is not a dictionary object.
 
+    Example:
+        >>> list({"limit": "4", "cursor": "cursor_string_here"})
     """
-    
+
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
@@ -129,6 +131,10 @@ def put(path: str, data: bytes, options: dict = {}) -> dict:
         AssertionError: If the type of `path` is not a string object.
         AssertionError: If the type of `data` is not a bytes object.
         AssertionError: If the type of `options` is not a dictionary object.
+
+    Example:
+        >>> with open('test.txt', 'rb') as f:
+        >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"})
     """
 
     assert type(path) == type(""), "path must be a string object"
@@ -173,6 +179,9 @@ def head(url: str, options: dict = {}) -> dict:
     Raises:
         AssertionError: If the `url` argument is not a string object.
         AssertionError: If the `options` argument is not a dictionary object.
+
+    Example:
+        >>> head("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
 
     assert type(url) == type(""), "url must be a string object"
@@ -208,6 +217,9 @@ def delete(url: any, options: dict = {}) -> dict:
 
     Raises:
         Exception: If the url parameter is not a string or a list of strings.
+
+    Example:
+        >>> delete("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
 
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
@@ -250,6 +262,9 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
         AssertionError: If the blob_url parameter is not a string object.
         AssertionError: If the to_path parameter is not a string object.
         AssertionError: If the options parameter is not a dictionary object.
+
+    Example:
+        >>> copy("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "copy-test/test.txt", {"addRandomSuffix": "false"})
     """
 
     assert type(blob_url) == type(""), "blob_url must be a string object"
@@ -277,5 +292,57 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
     )
 
     return _response_handler(resp)
+
+
+def download_file(url: str, path: str = None, options: dict = {}):
+    """
+    Downloads the blob object at the specified URL, and saves it to the specified path.
+
+    Args:
+        url (str): The URL of the blob object to download.
+        path (str, optional): The path where the downloaded file will be saved. If not provided, the file will be saved in the current working directory.
+        options (dict, optional): Additional options for the download operation. Defaults to {}.
+
+            -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
+
+    Returns:
+        bytes: The data of the blob object.
+
+    Raises:
+        AssertionError: If the url parameter is not a string object.
+        Exception: If an error occurs during the download process.
+
+    Example:
+        >>> download_file("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "path/to/save/", options={"token": "my_token"})
+    """
+
+    assert type(url) == type(""), "url must be a string object"
+    assert path.endswith('/'), "path must be a valid directory path"
+    path_to_save = path if path else '/'
+    assert os.path.exists(path_to_save), "path must be a valid directory path"
+
+    headers = {
+        "authorization": f'Bearer {_get_auth_token(options)}',
+    }
+
+    if _DEBUG: print("Headers: " + str(headers))
+
+    resp = head(url, headers=headers)
+    try:
+        bytes_to_write = _request_factory(
+            resp.get("downloadUrl"),
+            'GET',
+            ).content
+        
+        with open(f"{path_to_save}{resp.get('pathname').split('/')[-1]}", 'wb') as f:
+            f.write(bytes_to_write)
+    except Exception as e:
+        if _DEBUG: print(f"An error occurred. Please try again. Error: {e}")
+        raise Exception(f"An error occurred. Please try again.")
+    
+
+    
+
+
 
 
