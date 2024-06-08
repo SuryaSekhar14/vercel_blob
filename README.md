@@ -148,7 +148,7 @@ The copy method can be used to copy an existing blob to another location inside 
 
 ```python
 def copy_a_blob():
-    resp = vercel_blob.copy("https://blobstore.public.blob.vercel-storage.com/test.txt", "new-folder/test.txt")
+    resp = vercel_blob.copy("https://surya.public.blob.vercel-storage.com/test.txt", "new-folder/test.txt")
     print(resp)
 ```
 
@@ -171,3 +171,11 @@ def download_a_file_on_the_server():
 ```
 
 The file will be downloaded to the specified directory. If no directory is specified, it will be downloaded to the program's base directory.
+
+
+## Common Issues
+
+1. Since this storage is still in beta, the requests sometimes results in unexpected Connection Errors. To mitigate this, I used a 'retry request' function, that attempts 3 requests with exponential backoff between requests. 
+
+    This might result in error messages like ```Request failed on attempt 1 (HTTPSConnectionPool(host='blob.vercel-storage.com', port=443): Read timed out. (read timeout=10))``` in the terminal.
+
