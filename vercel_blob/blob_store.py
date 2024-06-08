@@ -38,6 +38,7 @@ def _guess_mime_type(url) -> str:
     else:
         return "application/octet-stream"
 
+
 def _request_factory(url: str, method: str, backoff_factor: int = 0.5, status_forcelist: list = [502, 503, 504], timeout: int = 10, **kwargs) -> requests.Response:
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
         try:
@@ -79,6 +80,7 @@ def list(options: dict = {}) -> dict:
         AssertionError: If the options parameter is not a dictionary object.
 
     """
+
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
@@ -128,6 +130,7 @@ def put(path: str, data: bytes, options: dict = {}) -> dict:
         AssertionError: If the type of `data` is not a bytes object.
         AssertionError: If the type of `options` is not a dictionary object.
     """
+
     assert type(path) == type(""), "path must be a string object"
     assert type(data) == type(b""), "data must be a bytes object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
@@ -171,6 +174,7 @@ def head(url: str, options: dict = {}) -> dict:
         AssertionError: If the `url` argument is not a string object.
         AssertionError: If the `options` argument is not a dictionary object.
     """
+
     assert type(url) == type(""), "url must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
@@ -205,6 +209,7 @@ def delete(url: any, options: dict = {}) -> dict:
     Raises:
         Exception: If the url parameter is not a string or a list of strings.
     """
+    
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
     headers = {
@@ -246,6 +251,7 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
         AssertionError: If the to_path parameter is not a string object.
         AssertionError: If the options parameter is not a dictionary object.
     """
+
     assert type(blob_url) == type(""), "blob_url must be a string object"
     assert type(to_path) == type(""), "to_path must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
