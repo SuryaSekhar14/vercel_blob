@@ -327,7 +327,7 @@ def download_file(url: str, path: str = None, options: dict = {}):
 
     if _DEBUG: print("Headers: " + str(headers))
 
-    resp = head(url, headers=headers)
+    resp = head(url)
     try:
         bytes_to_write = _request_factory(
             resp.get("downloadUrl"),
