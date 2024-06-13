@@ -320,14 +320,11 @@ def download_file(url: str, path: str = None, options: dict = {}):
     assert path.endswith('/'), "path must be a valid directory path"
     path_to_save = path if path else '/'
     assert os.path.exists(path_to_save), "path must be a valid directory path"
+    assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
-    headers = {
-        "authorization": f'Bearer {_get_auth_token(options)}',
-    }
-
-    if _DEBUG: print("Headers: " + str(headers))
-
-    resp = head(url)
+    resp = head(url, {
+        "token": _get_auth_token(options),
+    })
     try:
         bytes_to_write = _request_factory(
             resp.get("downloadUrl"),
