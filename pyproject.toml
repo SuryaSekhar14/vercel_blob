@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "vercel_blob"
-version = "0.2.4"
+version = "0.2.5"
 description = "A Python Wrapper for Vercel Blob Storage API"
 authors = ["SuryaSekhar14 <suryasekhardatta22@gmail.com>"]
 readme = "README.md"
