@@ -39,6 +39,10 @@ def _guess_mime_type(url) -> str:
         return "application/octet-stream"
 
 
+def _getScriptPath() -> str:
+    return os.getcwd() + '/'
+
+
 def _request_factory(url: str, method: str, backoff_factor: int = 0.5, status_forcelist: list = [502, 503, 504], timeout: int = 10, **kwargs) -> requests.Response:
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
         try:
@@ -294,7 +298,7 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
     return _response_handler(resp)
 
 
-def download_file(url: str, path: str = None, options: dict = {}):
+def download_file(url: str, path: str = '', options: dict = {}):
     """
     Downloads the blob object at the specified URL, and saves it to the specified path.
 
@@ -317,22 +321,30 @@ def download_file(url: str, path: str = None, options: dict = {}):
     """
 
     assert type(url) == type(""), "url must be a string object"
-    assert path.endswith('/'), "path must be a valid directory path"
-    path_to_save = path if path else '/'
-    assert os.path.exists(path_to_save), "path must be a valid directory path"
+    assert type(path) == type(""), "path must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
-    resp = head(url, {
-        "token": _get_auth_token(options),
-    })
+    script_path = _getScriptPath()
+    sanitized_path = path.lstrip('/')
+    path_to_save = script_path + sanitized_path
+    if path_to_save != script_path:
+        assert path.endswith('/'), "path must be a valid directory path, ending with '/'"
+        assert os.path.exists(path_to_save), "path must be a valid directory path"
+
+    if _DEBUG: print(f"Downloading file from {url} to {path_to_save}")
+
+
     try:
-        bytes_to_write = _request_factory(
-            resp.get("downloadUrl"),
-            'GET',
-            ).content
-        
-        with open(f"{path_to_save}{resp.get('pathname').split('/')[-1]}", 'wb') as f:
-            f.write(bytes_to_write)
+        resp = _request_factory(
+            f"{url}?download=1",
+            'GET'
+        ).content
+        try:
+            with open(f"{path_to_save}{url.split('/')[-1]}", 'wb') as f:
+                f.write(resp)
+        except FileNotFoundError as e:
+            if _DEBUG: print(f"An error occurred. Please try again. Error: {e}")
+            raise Exception(f"The directory must exist before downloading the file. Please create the directory and try again.")
     except Exception as e:
         if _DEBUG: print(f"An error occurred. Please try again. Error: {e}")
         raise Exception(f"An error occurred. Please try again.")
