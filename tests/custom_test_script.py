@@ -1,8 +1,7 @@
 # I have no idea how to write pytest modules, please bear with me
 
-import vercel_blob
 import dotenv
-
+import vercel_blob
 
 dotenv.load_dotenv()
 

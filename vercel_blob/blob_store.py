@@ -1,7 +1,9 @@
-import requests
+# pylint: disable=line-too-long, unidiomatic-typecheck, dangerous-default-value
+
 import os
 import time
 from mimetypes import guess_type
+import requests
 
 
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
@@ -39,7 +41,7 @@ def _guess_mime_type(url) -> str:
         return "application/octet-stream"
 
 
-def _getScriptPath() -> str:
+def _get_script_path() -> str:
     return os.getcwd() + '/'
 
 
@@ -51,7 +53,7 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, status_fo
                 return response
         except requests.exceptions.RequestException as e:
             print(f"Request failed on attempt {attempt} ({e})")
-            time.sleep(backoff_factor * attempt) 
+            time.sleep(backoff_factor * attempt)
     return None
 
 
@@ -245,7 +247,7 @@ def delete(url: any, options: dict = {}) -> dict:
     else:
         raise Exception('url must be a string or a list of strings')
 
-    
+
 def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
     """
     Copy a blob from a source URL to a destination path inside the blob store.
@@ -324,7 +326,7 @@ def download_file(url: str, path: str = '', options: dict = {}):
     assert type(path) == type(""), "path must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
-    script_path = _getScriptPath()
+    script_path = _get_script_path()
     sanitized_path = path.lstrip('/')
     path_to_save = script_path + sanitized_path
     if path_to_save != script_path:
@@ -344,14 +346,7 @@ def download_file(url: str, path: str = '', options: dict = {}):
                 f.write(resp)
         except FileNotFoundError as e:
             if _DEBUG: print(f"An error occurred. Please try again. Error: {e}")
-            raise Exception(f"The directory must exist before downloading the file. Please create the directory and try again.")
+            raise Exception("The directory must exist before downloading the file. Please create the directory and try again.")
     except Exception as e:
         if _DEBUG: print(f"An error occurred. Please try again. Error: {e}")
-        raise Exception(f"An error occurred. Please try again.")
-    
-
-    
-
-
-
-
+        raise Exception("An error occurred. Please try again.")

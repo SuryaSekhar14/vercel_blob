@@ -1,4 +1,21 @@
+# pylint: disable=line-too-long
+
+
+'''
+This library provides a Python interface for interacting with the Vercel Blob Storage API. 
+
+The package provides functions for uploading, downloading, listing, copying, and deleting blob objects in the Vercel Blob Store.
+
+>>> import vercel_blob
+>>> put(path = file_path, data = data).get("url")
+'https://blobstore.public.blob.vercel-storage.com/file.txt-1673995438295-0'
+
+The source code for this package can be found on GitHub at: https://github.com/SuryaSekhar14/vercel_blob
+'''
+
+
 from . import blob_store
+
 
 def list(options: dict = {}) -> dict:
     """
@@ -22,7 +39,7 @@ def list(options: dict = {}) -> dict:
     Example:
         >>> list({"limit": "4", "cursor": "cursor_string_here"})
     """
-        
+
     return blob_store.list(options)
 
 
@@ -75,7 +92,7 @@ def head(url: str, options: dict = {}) -> dict:
     Example:
         >>> head("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
-    
+
     return blob_store.head(url, options)
 
 
@@ -153,17 +170,3 @@ def download_file(url: str, path: str = '', options: dict = {}):
     """
 
     return blob_store.download_file(url, path, options)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
