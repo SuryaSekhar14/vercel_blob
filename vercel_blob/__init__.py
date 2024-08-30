@@ -17,6 +17,9 @@ The source code for this package can be found on GitHub at: https://github.com/S
 from . import blob_store
 
 
+__version__ = '0.2.5.2'
+
+
 def list(options: dict = {}) -> dict:
     """
     Retrieves a list of items from the blob store based on the provided options.
