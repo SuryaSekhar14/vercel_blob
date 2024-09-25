@@ -1,4 +1,4 @@
 vercel_blob
 nbsphinx
 sphinxcontrib-bibtex
-python-docs-theme
+sphinx-rtd-theme
