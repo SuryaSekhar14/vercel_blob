@@ -58,10 +58,6 @@ html_context = {
     "doc_path": "docs",
 }
 html_logo = ""
-html_static_path = ['_static']
-html_sidebars = {
-    "**": ["sidebar-nav-bs.html"],
-}
 
 htmlhelp_basename = 'vercel_blob'
 html_show_sourcelink = True
