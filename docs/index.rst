@@ -41,13 +41,13 @@ Using vercel_blob
 -----------------
 
 Currently only supports the basic list, put, delete, copy and head(get
-file metadata) operations. Here’s a quick overview:
+file metadata) operations. Here's a quick overview:
 
 List all files in the Blob Storage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The list method will return a list of all files in the blob storage. You
-can pass ‘limit’ to limit the returned number of blobs.
+can pass 'limit' to limit the returned number of blobs.
 
 .. code:: python
 
@@ -110,8 +110,8 @@ The response object would look something like this:
    downloadUrl: `string`
 
 You would notice that the blob uploaded automatically has a random
-suffix attached to it. To remove that, just add the ‘addRandomSuffix’
-parameter to the options dictionary. Here’s an example:
+suffix attached to it. To remove that, just add the 'addRandomSuffix'
+parameter to the options dictionary. Here's an example:
 
 .. code:: python
 
@@ -126,7 +126,7 @@ Delete a blob or a list of blobs from the Blob Storage
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The delete method will delete a file from the Blob Storage. It takes in
-the URL of the blob, or a list of blobs. Here’s an example:
+the URL of the blob, or a list of blobs. Here's an example:
 
 .. code:: python
 
@@ -144,7 +144,7 @@ blob is not present, it will not result in any error.
 Get blob metadata
 ~~~~~~~~~~~~~~~~~
 
-The head method will return the blob object’s metadata.
+The head method will return the blob object's metadata.
 
 .. code:: python
 
@@ -173,7 +173,7 @@ Copy blob from one folder to another
 The copy method can be used to copy an existing blob to another location
 inside the same blob store. Note that the addRandomSuffix option is
 False by default for copy operations, hence it overwrites by default. To
-prevent this behavior, you can set the ‘addRandomSuffix’ option to
+prevent this behavior, you can set the 'addRandomSuffix' option to
 “true”.
 
 .. code:: python
@@ -205,14 +205,14 @@ method.
        vercel_blob.download_file('blob_url', 'path/to/directory/', {'token': 'my_token'})
 
 The file will be downloaded to the specified directory. If no directory
-is specified, it will be downloaded to the program’s base directory.
+is specified, it will be downloaded to the program's base directory.
 
 Common Issues
 -------------
 
 1. Since this storage is still in beta, the requests sometimes results
-   in unexpected Connection Errors. To mitigate this, I used a ‘retry
-   request’ function, that attempts 3 requests with exponential backoff
+   in unexpected Connection Errors. To mitigate this, I used a 'retry
+   request' function, that attempts 3 requests with exponential backoff
    between requests.
 
    This might result in error messages like

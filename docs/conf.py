@@ -4,7 +4,7 @@ import vercel_blob
 project = 'vercel_blob'
 author = 'Surya Sekhar Datta'
 copyright = '%d, Surya Sekhar Datta' % time.gmtime().tm_year
-version = ".".join(vercel_blob.__version__.split(".")[:2])
+version = vercel_blob.__version__
 release = vercel_blob.__version__
 master_doc = 'index'
 
@@ -44,7 +44,7 @@ autosummary_generate = True
 # a list of builtin themes.
 html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    # "collapse_navigation": True,
+    "collapse_navigation": False,
     "external_links":
         [{"name": "Github", "url": "https://github.com/SuryaSekhar14/vercel_blob"}],
     # "footer_items": ["sphinx-version.html"],
