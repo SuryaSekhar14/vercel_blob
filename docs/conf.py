@@ -20,6 +20,14 @@ extensions = [
     'sphinxcontrib.bibtex',
 ]
 
+bibtex_bibfiles = ['bibliography.bib']
+bibtex_default_style = 'unsrt'
+
+# templates_path = ['_templates']
+# exclude_patterns = ['.build']
+
+# rst_prolog = """
+# """
 language = "en"
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -49,7 +57,11 @@ html_short_title = "vercel_blob"
 html_context = {
     "doc_path": "docs",
 }
-html_logo = ""
+# html_logo = ""
+# html_static_path = ['_static']
+# html_sidebars = {
+#     "**": ["sidebar-nav-bs.html"],
+# }
 
 htmlhelp_basename = 'vercel_blob'
 html_show_sourcelink = True
