@@ -14,20 +14,20 @@ Getting Started
 ---------------
 
 Python Version
-~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^
 
 This package (vercel_blob) was written using Python 3 in mind, and
 Python 2 will not work properly.
 
 Set Environment Variable for Authorization
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: bash
 
    export BLOB_READ_WRITE_TOKEN="superssecretkey"
 
 Add vercel_blob to your code
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 .. code:: python
 
@@ -44,7 +44,7 @@ Currently only supports the basic list, put, delete, copy and head(get
 file metadata) operations. Here's a quick overview:
 
 List all files in the Blob Storage
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The list method will return a list of all files in the blob storage. You
 can pass 'limit' to limit the returned number of blobs.
@@ -83,7 +83,7 @@ results as shown in the example below:
        })
 
 Upload File / Blob to the Storage
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The put method can be used to upload a blob to the blob store. If the
 blob is already present in the store, it will be overwritten.
@@ -123,7 +123,7 @@ parameter to the options dictionary. Here's an example:
            print(resp)
 
 Delete a blob or a list of blobs from the Blob Storage
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The delete method will delete a file from the Blob Storage. It takes in
 the URL of the blob, or a list of blobs. Here's an example:
@@ -142,7 +142,7 @@ does not return anything. If a blob is present, it will be deleted. If a
 blob is not present, it will not result in any error.
 
 Get blob metadata
-~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^
 
 The head method will return the blob object's metadata.
 
@@ -168,7 +168,7 @@ The JSON object returned will contain the following properties:
 If the blob url provided is not valid, an Exception will be thrown.
 
 Copy blob from one folder to another
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 The copy method can be used to copy an existing blob to another location
 inside the same blob store. Note that the addRandomSuffix option is
@@ -193,7 +193,7 @@ The JSON representation of the response should look something like this:
      downloadUrl: `string`
 
 Download a file on the server
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
 If you want to make the client download a file, you just redirect him to
 the downloadUrl. But for the server, you can use the download_file()

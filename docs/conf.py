@@ -49,8 +49,9 @@ html_theme_options = {
         [{"name": "Github", "url": "https://github.com/SuryaSekhar14/vercel_blob"}],
     # "footer_items": ["sphinx-version.html"],
     "navbar_align": "left",
+    'repository_url': 'https://github.com/SuryaSekhar14/vercel_blob',
     # "navbar_end": ["search-field.html"],
-    # "navigation_depth": 2,
+    "navigation_depth": 4,
     # "show_prev_next": False,
 }
 html_short_title = "vercel_blob"
