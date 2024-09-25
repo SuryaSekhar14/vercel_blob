@@ -1,3 +1,4 @@
 vercel_blob
-nbsphinx 
+nbsphinx
 sphinxcontrib-bibtex
+python-docs-theme
