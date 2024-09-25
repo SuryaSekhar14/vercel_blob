@@ -20,14 +20,6 @@ extensions = [
     'sphinxcontrib.bibtex',
 ]
 
-bibtex_bibfiles = ['bibliography.bib']
-bibtex_default_style = 'unsrt'
-
-templates_path = ['_templates']
-exclude_patterns = ['.build']
-
-rst_prolog = """
-"""
 language = "en"
 
 # The name of the Pygments (syntax highlighting) style to use.
@@ -42,16 +34,16 @@ autosummary_generate = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "python_docs_theme"
+html_theme = "sphinx_rtd_theme"
 html_theme_options = {
-    "collapse_navigation": True,
+    # "collapse_navigation": True,
     "external_links":
         [{"name": "Github", "url": "https://github.com/SuryaSekhar14/vercel_blob"}],
-    "footer_items": ["sphinx-version.html"],
+    # "footer_items": ["sphinx-version.html"],
     "navbar_align": "left",
-    "navbar_end": ["search-field.html"],
-    "navigation_depth": 2,
-    "show_prev_next": False,
+    # "navbar_end": ["search-field.html"],
+    # "navigation_depth": 2,
+    # "show_prev_next": False,
 }
 html_short_title = "vercel_blob"
 html_context = {
