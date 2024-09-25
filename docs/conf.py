@@ -42,7 +42,7 @@ autosummary_generate = True
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = "pydata_sphinx_theme"
+html_theme = "python_docs_theme"
 html_theme_options = {
     "collapse_navigation": True,
     "external_links":
@@ -57,7 +57,7 @@ html_short_title = "vercel_blob"
 html_context = {
     "doc_path": "docs",
 }
-html_logo = "_static/chaospy_logo2.svg"
+html_logo = ""
 html_static_path = ['_static']
 html_sidebars = {
     "**": ["sidebar-nav-bs.html"],
@@ -68,9 +68,4 @@ html_show_sourcelink = True
 
 intersphinx_mapping = {
     'python': ('https://docs.python.org/3/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
-    'scipy': ('https://docs.scipy.org/doc/scipy/reference', None),
-    'numpoly': ('https://numpoly.readthedocs.io/en/master/', None),
-    'openturns': ('https://openturns.github.io/openturns/master/', None),
-    'scikit-learn': ('https://scikit-learn.org/stable/', None),
 }
