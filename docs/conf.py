@@ -7,6 +7,7 @@ copyright = '%d, Surya Sekhar Datta' % time.gmtime().tm_year
 version = vercel_blob.__version__
 release = vercel_blob.__version__
 master_doc = 'index'
+github_url = 'https://github.com/SuryaSekhar14/vercel_blob'
 
 extensions = [
     'sphinx.ext.autodoc',
