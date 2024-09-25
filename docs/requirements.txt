@@ -1,2 +1,3 @@
 vercel_blob
 nbsphinx 
+sphinxcontrib-bibtex
