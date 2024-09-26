@@ -18,4 +18,4 @@ from .blob_store import *
 
 
 __author__ = 'Surya Sekhar Datta <hello@surya.dev>'
-__version__ = '0.2.5.3'
+__version__ = '0.3.0'

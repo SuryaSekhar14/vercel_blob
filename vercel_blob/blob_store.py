@@ -1,5 +1,19 @@
 # pylint: disable=line-too-long, unidiomatic-typecheck, dangerous-default-value
 
+
+'''
+This library provides a Python interface for interacting with the Vercel Blob Storage API. 
+
+The package provides functions for uploading, downloading, listing, copying, and deleting blob objects in the Vercel Blob Store.
+
+>>> import vercel_blob
+>>> put(path = file_path, data = data).get("url")
+'https://blobstore.public.blob.vercel-storage.com/file.txt-1673995438295-0'
+
+The source code for this package can be found on GitHub at: https://github.com/SuryaSekhar14/vercel_blob
+'''
+
+
 import os
 import time
 from mimetypes import guess_type
@@ -11,7 +25,7 @@ _API_VERSION = '7'
 _PAGINATED_LIST_SIZE = 1000
 _DEFAULT_CACHE_AGE = '31536000'
 _MAX_RETRY_REQUEST_RETRIES = 3
-_DEBUG = os.environ.get('DEBUG', False)
+_DEBUG = os.environ.get('VERCEL_BLOB_DEBUG', False)
 
 
 def _get_auth_token_from_env() -> str:
@@ -45,11 +59,11 @@ def _get_script_path() -> str:
     return os.getcwd() + '/'
 
 
-def _request_factory(url: str, method: str, backoff_factor: int = 0.5, status_forcelist: list = [502, 503, 504], timeout: int = 10, **kwargs) -> requests.Response:
+def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: int = 10, **kwargs) -> requests.Response:
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
         try:
             response = requests.request(method, url, timeout=timeout, **kwargs)
-            if response.status_code not in status_forcelist:
+            if response.status_code not in (502, 503, 504):
                 return response
         except requests.exceptions.RequestException as e:
             print(f"Request failed on attempt {attempt} ({e})")
@@ -106,7 +120,9 @@ def list(options: dict = {}) -> dict:
     if options.get('mode'):
         params['mode'] = options['mode']
 
-    if _DEBUG: print("Headers: " + str(headers))
+    if _DEBUG:
+        print("Headers: " + str(headers))
+
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}",
         'GET',
@@ -158,7 +174,9 @@ def put(path: str, data: bytes, options: dict = {}) -> dict:
     if options.get('addRandomSuffix') in ("false", False, "0"):
         headers['x-add-random-suffix'] = "0"
 
-    if _DEBUG: print("Headers: " + str(headers))
+    if _DEBUG:
+        print("Headers: " + str(headers))
+
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/{path}",
         'PUT',
@@ -198,7 +216,9 @@ def head(url: str, options: dict = {}) -> dict:
         "x-api-version": _API_VERSION,
     }
 
-    if _DEBUG: print("Headers: " + str(headers))
+    if _DEBUG:
+        print("Headers: " + str(headers))
+
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/?url={url}",
         'GET',
@@ -236,7 +256,9 @@ def delete(url: any, options: dict = {}) -> dict:
     }
 
     if type(url) == type("") or (type(url) == type([]) and all(isinstance(u, str) for u in url)):
-        if _DEBUG: print("Headers: " + str(headers))
+        if _DEBUG:
+            print("Headers: " + str(headers))
+
         resp = _request_factory(
             f"{_VERCEL_BLOB_API_BASE_URL}/delete",
             'POST',
@@ -288,7 +310,9 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
     if options.get('addRandomSuffix') != None:
         headers['x-add-random-suffix'] = "1"
 
-    if _DEBUG: print("Headers: " + str(headers))
+    if _DEBUG:
+        print("Headers: " + str(headers))
+
     to_path_encoded = requests.utils.quote(to_path)
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/{to_path_encoded}",
@@ -333,8 +357,8 @@ def download_file(url: str, path: str = '', options: dict = {}):
         assert path.endswith('/'), "path must be a valid directory path, ending with '/'"
         assert os.path.exists(path_to_save), "path must be a valid directory path"
 
-    if _DEBUG: print(f"Downloading file from {url} to {path_to_save}")
-
+    if _DEBUG:
+        print(f"Downloading file from {url} to {path_to_save}")
 
     try:
         resp = _request_factory(
@@ -345,8 +369,10 @@ def download_file(url: str, path: str = '', options: dict = {}):
             with open(f"{path_to_save}{url.split('/')[-1]}", 'wb') as f:
                 f.write(resp)
         except FileNotFoundError as e:
-            if _DEBUG: print(f"An error occurred. Please try again. Error: {e}")
+            if _DEBUG:
+                print(f"An error occurred. Please try again. Error: {e}")
             raise Exception("The directory must exist before downloading the file. Please create the directory and try again.")
     except Exception as e:
-        if _DEBUG: print(f"An error occurred. Please try again. Error: {e}")
+        if _DEBUG:
+            print(f"An error occurred. Please try again. Error: {e}")
         raise Exception("An error occurred. Please try again.")
