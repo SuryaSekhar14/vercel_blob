@@ -7,7 +7,7 @@ readme = "README.md"
 repository = "https://github.com/SuryaSekhar14/vercel_blob"
 
 [tool.poetry.dependencies]
-python = "^3.11"
+python = "^3.10"
 requests = "^2.32.3"
 
 [build-system]
