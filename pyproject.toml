@@ -9,6 +9,8 @@ repository = "https://github.com/SuryaSekhar14/vercel_blob"
 [tool.poetry.dependencies]
 python = "^3.10"
 requests = "^2.32.3"
+urllib3 = ">=2.2.2"
+certifi = ">=2024.07.04"
 
 [build-system]
 requires = ["poetry-core"]
