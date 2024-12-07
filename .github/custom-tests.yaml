@@ -27,6 +27,13 @@ jobs:
     - name: Run Custom Test Script
       env:
         BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
-
       run: |
+        if [ ! -f "tests/custom_test_script.py" ]; then
+          echo "Error: custom_test_script.py not found!"
+          exit 1
+        fi
         python tests/custom_test_script.py
+        if [ $? -ne 0 ]; then
+          echo "Tests failed!"
+          exit 1
+        fi
