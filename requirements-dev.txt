@@ -1,2 +1,2 @@
 -r requirements.txt
-python-dotenv==1.0.1 
+python-dotenv==1.0.1 --hash=sha256:f7b63ef50f1b690dddf550d03497b66d609393b40b564ed0d674909a68ebf16a
