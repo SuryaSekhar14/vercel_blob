@@ -210,7 +210,7 @@ is specified, it will be downloaded to the program's base directory.
 Common Issues
 -------------
 
-1. Since this storage is still in beta, the requests sometimes results
+1. Since Vercel Storage is still in beta, and we are accessing it as a third-party Python Library, the requests sometimes results
    in unexpected Connection Errors. To mitigate this, I used a 'retry
    request' function, that attempts 3 requests with exponential backoff
    between requests.
