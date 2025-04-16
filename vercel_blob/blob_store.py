@@ -18,7 +18,8 @@ import os
 import time
 from mimetypes import guess_type
 import requests
-
+from tqdm import tqdm
+from vercel_blob.progress import ProgressFile
 
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
 _API_VERSION = '7'
@@ -59,12 +60,44 @@ def _get_script_path() -> str:
     return os.getcwd() + '/'
 
 
-def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: int = 10, **kwargs) -> requests.Response:
+def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: int = 10, verbose: bool = False, **kwargs) -> requests.Response:
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
         try:
-            response = requests.request(method, url, timeout=timeout, **kwargs)
-            if response.status_code not in (502, 503, 504):
-                return response
+            if verbose:
+                if method in ['PUT', 'POST'] and 'data' in kwargs:
+                    data = kwargs['data']
+                    total_size = len(data)
+
+                    with tqdm(total=total_size, unit='B', unit_scale=True, desc="Uploading") as pbar:
+                        progress_file = ProgressFile(data, pbar)
+                        
+                        response = requests.request(
+                            method,
+                            url, 
+                            data=progress_file, 
+                            timeout=timeout, 
+                            **{k:v for k,v in kwargs.items() if k != 'data'}
+                        )
+                        
+                        if response.status_code not in (502, 503, 504):
+                            return response
+                
+                elif method == 'GET':
+                    response = requests.request(method, url, timeout=timeout, stream=True, **kwargs)
+                    if response.status_code not in (502, 503, 504):
+                        total_size = int(response.headers.get('content-length', 0))
+                        with tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading") as pbar:
+                            content = b''
+                            for chunk in response.iter_content(chunk_size=8192):
+                                if chunk:
+                                    content += chunk
+                                    pbar.update(len(chunk))
+                            response._content = content
+                            return response
+            else:
+                response = requests.request(method, url, timeout=timeout, **kwargs)
+                if response.status_code not in (502, 503, 504):
+                    return response
         except requests.exceptions.RequestException as e:
             print(f"Request failed on attempt {attempt} ({e})")
             time.sleep(backoff_factor * attempt)
@@ -135,7 +168,7 @@ def list(options: dict = {}, timeout: int = 10) -> dict:
     return _response_handler(resp)
 
 
-def put(path: str, data: bytes, options: dict = {}, timeout: int = 10) -> dict:
+def put(path: str, data: bytes, options: dict = {}, timeout: int = 10, verbose: bool = False) -> dict:
     """
     Uploads the given data to the specified path in the Vercel Blob Store.
 
@@ -148,6 +181,7 @@ def put(path: str, data: bytes, options: dict = {}, timeout: int = 10) -> dict:
             -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "true".
             -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
         timeout (int, optional): The timeout for the request. Defaults to 10.
+        verbose (bool, optional): Whether to show detailed information during upload. Defaults to False.
             
     Returns:
         dict: The response from the Vercel Blob Store API.
@@ -159,7 +193,7 @@ def put(path: str, data: bytes, options: dict = {}, timeout: int = 10) -> dict:
 
     Example:
         >>> with open('test.txt', 'rb') as f:
-        >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"})
+        >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"}, verbose=True)
     """
 
     assert type(path) == type(""), "path must be a string object"
@@ -186,6 +220,7 @@ def put(path: str, data: bytes, options: dict = {}, timeout: int = 10) -> dict:
         headers=headers,
         data=data,
         timeout=timeout,
+        verbose=verbose,
     )
 
     return _response_handler(resp)
@@ -278,7 +313,7 @@ def delete(url: any, options: dict = {}, timeout: int = 10) -> dict:
         raise Exception('url must be a string or a list of strings')
 
 
-def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10) -> dict:
+def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10, verbose: bool = False) -> dict:
     """
     Copy a blob from a source URL to a destination path inside the blob store.
 
@@ -291,6 +326,7 @@ def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10) -> 
             -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
             -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "false" for copy operation.
         timeout (int, optional): The timeout for the request. Defaults to 10.
+        verbose (bool, optional): Whether to show detailed information during copy operation. Defaults to False.
 
     Returns:
         dict: The response from the copy operation.
@@ -301,7 +337,7 @@ def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10) -> 
         AssertionError: If the options parameter is not a dictionary object.
 
     Example:
-        >>> copy("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "copy-test/test.txt", {"addRandomSuffix": "false"})
+        >>> copy("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "copy-test/test.txt", {"addRandomSuffix": "false"}, verbose=True)
     """
 
     assert type(blob_url) == type(""), "blob_url must be a string object"
@@ -329,12 +365,13 @@ def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10) -> 
         headers=headers,
         params={"fromUrl": blob_url},
         timeout=timeout,
+        verbose=verbose,
     )
 
     return _response_handler(resp)
 
 
-def download_file(url: str, path: str = '', options: dict = {}, timeout: int = 10):
+def download_file(url: str, path: str = '', options: dict = {}, timeout: int = 10, verbose: bool = False):
     """
     Downloads the blob object at the specified URL, and saves it to the specified path.
 
@@ -345,6 +382,7 @@ def download_file(url: str, path: str = '', options: dict = {}, timeout: int = 1
 
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
         timeout (int, optional): The timeout for the request. Defaults to 10.
+        verbose (bool, optional): Whether to show detailed information during download. Defaults to False.
 
     Returns:
         bytes: The data of the blob object.
@@ -354,7 +392,7 @@ def download_file(url: str, path: str = '', options: dict = {}, timeout: int = 1
         Exception: If an error occurs during the download process.
 
     Example:
-        >>> download_file("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "path/to/save/", options={"token": "my_token"})
+        >>> download_file("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "path/to/save/", options={"token": "my_token"}, verbose=True)
     """
 
     assert type(url) == type(""), "url must be a string object"
@@ -375,7 +413,8 @@ def download_file(url: str, path: str = '', options: dict = {}, timeout: int = 1
         resp = _request_factory(
             f"{url}?download=1",
             'GET',
-            timeout=timeout
+            timeout=timeout,
+            verbose=verbose,
         ).content
         try:
             with open(f"{path_to_save}{url.split('/')[-1]}", 'wb') as f:
