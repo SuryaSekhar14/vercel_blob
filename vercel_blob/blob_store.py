@@ -80,7 +80,7 @@ def _response_handler(resp: requests.Response) -> dict:
         raise Exception(f"An error occoured: {resp.json()}")
 
 
-def list(options: dict = {}) -> dict:
+def list(options: dict = {}, timeout: int = 10) -> dict:
     """
     Retrieves a list of items from the blob store based on the provided options.
 
@@ -92,6 +92,7 @@ def list(options: dict = {}) -> dict:
             -> `prefix` (str, optional): A string used to filter for blob objects contained in a specific folder assuming that the folder name was used in the pathname when the blob object was uploaded
             -> `cursor` (str, optional): A string obtained from a previous response for pagination of retults
             -> `mode` (str, optional): A string specifying the response format. Can either be `expanded` (default) or `folded`. In folded mode all blobs that are located inside a folder will be folded into a single folder string entry
+        timeout (int, optional): The timeout for the request. Defaults to 10.
     
     Returns:
         dict: A dictionary containing the response from the blob store.
@@ -128,12 +129,13 @@ def list(options: dict = {}) -> dict:
         'GET',
         params=params,
         headers=headers,
+        timeout=timeout,
     )
 
     return _response_handler(resp)
 
 
-def put(path: str, data: bytes, options: dict = {}) -> dict:
+def put(path: str, data: bytes, options: dict = {}, timeout: int = 10) -> dict:
     """
     Uploads the given data to the specified path in the Vercel Blob Store.
 
@@ -145,6 +147,7 @@ def put(path: str, data: bytes, options: dict = {}) -> dict:
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
             -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "true".
             -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
+        timeout (int, optional): The timeout for the request. Defaults to 10.
             
     Returns:
         dict: The response from the Vercel Blob Store API.
@@ -182,12 +185,13 @@ def put(path: str, data: bytes, options: dict = {}) -> dict:
         'PUT',
         headers=headers,
         data=data,
+        timeout=timeout,
     )
 
     return _response_handler(resp)
 
 
-def head(url: str, options: dict = {}) -> dict:
+def head(url: str, options: dict = {}, timeout: int = 10) -> dict:
     """
     Gets the metadata of the blob object at the specified URL.
 
@@ -196,6 +200,7 @@ def head(url: str, options: dict = {}) -> dict:
         options (dict, optional): Additional options for the request. Defaults to {}.
 
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
+        timeout (int, optional): The timeout for the request. Defaults to 10.
 
     Returns:
         dict: The response from the HEAD request.
@@ -223,12 +228,13 @@ def head(url: str, options: dict = {}) -> dict:
         f"{_VERCEL_BLOB_API_BASE_URL}/?url={url}",
         'GET',
         headers=headers,
+        timeout=timeout,
     )
 
     return _response_handler(resp)
 
 
-def delete(url: any, options: dict = {}) -> dict:
+def delete(url: any, options: dict = {}, timeout: int = 10) -> dict:
     """
     Deletes the specified URL(s) from the Vercel Blob Store.
 
@@ -237,6 +243,7 @@ def delete(url: any, options: dict = {}) -> dict:
         options (dict, optional): Additional options for the delete operation. Defaults to {}.
 
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
+        timeout (int, optional): The timeout for the request. Defaults to 10.
 
     Returns:
         dict: The response from the delete operation.
@@ -264,13 +271,14 @@ def delete(url: any, options: dict = {}) -> dict:
             'POST',
             headers=headers,
             json={"urls": [url] if isinstance(url, str) else url},
+            timeout=timeout,
         )
         return _response_handler(resp)
     else:
         raise Exception('url must be a string or a list of strings')
 
 
-def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
+def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10) -> dict:
     """
     Copy a blob from a source URL to a destination path inside the blob store.
 
@@ -282,6 +290,7 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
             -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
             -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "false" for copy operation.
+        timeout (int, optional): The timeout for the request. Defaults to 10.
 
     Returns:
         dict: The response from the copy operation.
@@ -319,12 +328,13 @@ def copy(blob_url: str, to_path: str, options: dict = {}) -> dict:
         'PUT',
         headers=headers,
         params={"fromUrl": blob_url},
+        timeout=timeout,
     )
 
     return _response_handler(resp)
 
 
-def download_file(url: str, path: str = '', options: dict = {}):
+def download_file(url: str, path: str = '', options: dict = {}, timeout: int = 10):
     """
     Downloads the blob object at the specified URL, and saves it to the specified path.
 
@@ -334,6 +344,7 @@ def download_file(url: str, path: str = '', options: dict = {}):
         options (dict, optional): Additional options for the download operation. Defaults to {}.
 
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
+        timeout (int, optional): The timeout for the request. Defaults to 10.
 
     Returns:
         bytes: The data of the blob object.
@@ -363,7 +374,8 @@ def download_file(url: str, path: str = '', options: dict = {}):
     try:
         resp = _request_factory(
             f"{url}?download=1",
-            'GET'
+            'GET',
+            timeout=timeout
         ).content
         try:
             with open(f"{path_to_save}{url.split('/')[-1]}", 'wb') as f:
