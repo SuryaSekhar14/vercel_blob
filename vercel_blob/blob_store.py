@@ -113,7 +113,7 @@ def _response_handler(resp: requests.Response) -> dict:
         raise Exception(f"An error occoured: {resp.json()}")
 
 
-def list(options: dict = {}, timeout: int = 10) -> dict:
+def list(options: dict = None, timeout: int = 10) -> dict:  
     """
     Retrieves a list of items from the blob store based on the provided options.
 
@@ -136,6 +136,8 @@ def list(options: dict = {}, timeout: int = 10) -> dict:
     Example:
         >>> list({"limit": "4", "cursor": "cursor_string_here"})
     """
+    if options is None:  
+        options = {} 
 
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
@@ -168,7 +170,7 @@ def list(options: dict = {}, timeout: int = 10) -> dict:
     return _response_handler(resp)
 
 
-def put(path: str, data: bytes, options: dict = {}, timeout: int = 10, verbose: bool = False) -> dict:
+def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose: bool = False) -> dict:
     """
     Uploads the given data to the specified path in the Vercel Blob Store.
 
@@ -195,6 +197,8 @@ def put(path: str, data: bytes, options: dict = {}, timeout: int = 10, verbose: 
         >>> with open('test.txt', 'rb') as f:
         >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"}, verbose=True)
     """
+    if options is None:  
+        options = {} 
 
     assert type(path) == type(""), "path must be a string object"
     assert type(data) == type(b""), "data must be a bytes object"
@@ -226,7 +230,7 @@ def put(path: str, data: bytes, options: dict = {}, timeout: int = 10, verbose: 
     return _response_handler(resp)
 
 
-def head(url: str, options: dict = {}, timeout: int = 10) -> dict:
+def head(url: str, options: dict = None, timeout: int = 10) -> dict:
     """
     Gets the metadata of the blob object at the specified URL.
 
@@ -247,6 +251,8 @@ def head(url: str, options: dict = {}, timeout: int = 10) -> dict:
     Example:
         >>> head("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
+    if options is None:  
+        options = {} 
 
     assert type(url) == type(""), "url must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
@@ -269,7 +275,7 @@ def head(url: str, options: dict = {}, timeout: int = 10) -> dict:
     return _response_handler(resp)
 
 
-def delete(url: any, options: dict = {}, timeout: int = 10) -> dict:
+def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
     """
     Deletes the specified URL(s) from the Vercel Blob Store.
 
@@ -289,6 +295,8 @@ def delete(url: any, options: dict = {}, timeout: int = 10) -> dict:
     Example:
         >>> delete("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
+    if options is None:  
+        options = {} 
 
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
@@ -313,7 +321,7 @@ def delete(url: any, options: dict = {}, timeout: int = 10) -> dict:
         raise Exception('url must be a string or a list of strings')
 
 
-def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10, verbose: bool = False) -> dict:
+def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, verbose: bool = False) -> dict:
     """
     Copy a blob from a source URL to a destination path inside the blob store.
 
@@ -339,7 +347,9 @@ def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10, ver
     Example:
         >>> copy("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "copy-test/test.txt", {"addRandomSuffix": "false"}, verbose=True)
     """
-
+    if options is None:  
+        options = {} 
+    
     assert type(blob_url) == type(""), "blob_url must be a string object"
     assert type(to_path) == type(""), "to_path must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
@@ -371,7 +381,7 @@ def copy(blob_url: str, to_path: str, options: dict = {}, timeout: int = 10, ver
     return _response_handler(resp)
 
 
-def download_file(url: str, path: str = '', options: dict = {}, timeout: int = 10, verbose: bool = False):
+def download_file(url: str, path: str = '', options: dict = None, timeout: int = 10, verbose: bool = False):
     """
     Downloads the blob object at the specified URL, and saves it to the specified path.
 
@@ -394,6 +404,8 @@ def download_file(url: str, path: str = '', options: dict = {}, timeout: int = 1
     Example:
         >>> download_file("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "path/to/save/", options={"token": "my_token"}, verbose=True)
     """
+    if options is None:  
+        options = {} 
 
     assert type(url) == type(""), "url must be a string object"
     assert type(path) == type(""), "path must be a string object"
