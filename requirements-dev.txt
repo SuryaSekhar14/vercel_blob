@@ -2,5 +2,3 @@
 python-dotenv==1.0.1 ; python_version >= "3.10" and python_version < "4.0" \
     --hash=sha256:e324ee90a023d808f1959c46bcbc04446a10ced277783dc6ee09987c37ec10ca \
     --hash=sha256:f7b63ef50f1b690dddf550d03497b66d609393b40b564ed0d674909a68ebf16a
-vercel_blob==0.3.0 ; python_version >= "3.10" and python_version < "4.0" \
-    --hash=sha256:a87d81e10348979a8653cd600b7ec0125dacf5e1426d1ac2ee05ce3637bda0ce

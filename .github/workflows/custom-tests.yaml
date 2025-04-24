@@ -21,15 +21,38 @@ jobs:
       with:
         python-version: "3.11"
 
+    - name: Create Virtual Environment
+      run: |
+        python -m venv venv
+        source venv/bin/activate
+        echo "Created virtual environment"
+
+    - name: Install Poetry
+      run: |
+        source venv/bin/activate
+        pip install poetry
+
     - name: Install Dependencies
       run: |
+        source venv/bin/activate
         python -m pip install --upgrade pip
         if [ -f requirements-dev.txt ]; then pip install -r requirements-dev.txt; fi
+
+    - name: Build Package with Poetry
+      run: |
+        source venv/bin/activate
+        poetry build
+
+    - name: Install Built Package
+      run: |
+        source venv/bin/activate
+        pip install dist/*.whl
 
     - name: Run Custom Test Script
       env:
         BLOB_READ_WRITE_TOKEN: ${{ secrets.BLOB_READ_WRITE_TOKEN }}
       run: |
+        source venv/bin/activate
         if [ ! -f "tests/custom_test_script.py" ]; then
           echo "Error: custom_test_script.py not found!"
           exit 1
