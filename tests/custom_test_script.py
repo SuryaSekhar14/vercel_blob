@@ -19,7 +19,8 @@ def upload_a_blob(file_path):
     with open(file_path, 'rb') as f:
         resp = vercel_blob.put('test-custom-testing-script.txt', f.read(), {
                 "addRandomSuffix": "false",
-            })
+            },
+            verbose=True)
         return resp
 
 
@@ -43,7 +44,7 @@ def copy_a_blob(url):
 
 
 def download_a_blob(url):
-    resp = vercel_blob.download_file(url)
+    resp = vercel_blob.download_file(url, verbose=True)
     return resp
 
 
