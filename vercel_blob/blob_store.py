@@ -20,6 +20,7 @@ from mimetypes import guess_type
 import requests
 from tqdm import tqdm
 from vercel_blob.progress import ProgressFile
+from vercel_blob.errors import BlobConfigError, BlobRequestError, BlobFileError
 
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
 _API_VERSION = '7'
@@ -33,7 +34,7 @@ def _get_auth_token_from_env() -> str:
     token = os.environ.get('BLOB_READ_WRITE_TOKEN')
 
     if not token:
-        raise Exception('BLOB_READ_WRITE_TOKEN environment variable not set')
+        raise BlobConfigError('BLOB_READ_WRITE_TOKEN environment variable not set')
 
     return token
 
@@ -106,11 +107,11 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
 
 def _response_handler(resp: requests.Response) -> dict:
     if resp is None:
-        raise Exception("Request failed after retries. Please try again.")
+        raise BlobRequestError("Request failed after retries. Please try again.")
     elif resp.status_code == 200:
         return resp.json()
     else:
-        raise Exception(f"An error occoured: {resp.json()}")
+        raise BlobRequestError(f"An error occoured: {resp.json()}")
 
 
 def list(options: dict = None, timeout: int = 10) -> dict:
@@ -434,8 +435,8 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
         except FileNotFoundError as e:
             if _DEBUG:
                 print(f"An error occurred. Please try again. Error: {e}")
-            raise Exception("The directory must exist before downloading the file. Please create the directory and try again.")
+            raise BlobFileError("The directory must exist before downloading the file. Please create the directory and try again.")
     except Exception as e:
         if _DEBUG:
             print(f"An error occurred. Please try again. Error: {e}")
-        raise Exception("An error occurred. Please try again.")
+        raise BlobRequestError("An error occurred. Please try again.")

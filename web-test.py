@@ -11,9 +11,7 @@ Use this to test the code.
 import vercel_blob
 import dotenv
 import pprint
-from flask import Flask, request, jsonify, redirect, Response
-import os
-from io import BytesIO
+from flask import Flask, request, redirect
 
 # dotenv.load_dotenv()
 app = Flask(__name__)
