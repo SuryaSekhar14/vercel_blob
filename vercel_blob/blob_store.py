@@ -445,7 +445,7 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
     except Exception as e:
         if _DEBUG:
             print(f"An error occurred. Please try again. Error: {e}")
-        raise BlobRequestError("An error occurred. Please try again.")
+        raise BlobRequestError("An error occurred. Please try again.") from e
 
 
 def set_progress_bar_colours(desc=None, bar=None, text=None):
