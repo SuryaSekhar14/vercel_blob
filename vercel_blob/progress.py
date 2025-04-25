@@ -28,7 +28,8 @@ class ProgressFile:
         Read a portion of the data and update the progress bar.
 
         Args:
-            size (int, optional): The number of bytes to read. Defaults to -1, which reads all remaining data.
+            size (int, optional): The number of bytes to read. 
+                Defaults to -1, which reads all remaining data.
 
         Returns:
             bytes: The chunk of data read

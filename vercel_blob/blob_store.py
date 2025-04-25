@@ -70,20 +70,20 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
 
                     with tqdm(total=total_size, unit='B', unit_scale=True, desc="Uploading") as pbar:
                         progress_file = ProgressFile(data, pbar)
-                        
+
                         response = requests.request(
                             method,
-                            url, 
-                            data=progress_file, 
-                            timeout=timeout, 
+                            url,
+                            data=progress_file,
+                            timeout=timeout,
                             **{k:v for k,v in kwargs.items() if k != 'data'}
                         )
-                        
+
                         if response.status_code not in (502, 503, 504):
                             return response
-                
+
                 elif method == 'GET':
-                    response = requests.request(method, url, timeout=timeout, stream=True, **kwargs)
+                    response = requests.request(method, url, timeout=timeout,stream=True, **kwargs)
                     if response.status_code not in (502, 503, 504):
                         total_size = int(response.headers.get('content-length', 0))
                         with tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading") as pbar:
@@ -113,7 +113,7 @@ def _response_handler(resp: requests.Response) -> dict:
         raise Exception(f"An error occoured: {resp.json()}")
 
 
-def list(options: dict = None, timeout: int = 10) -> dict:  
+def list(options: dict = None, timeout: int = 10) -> dict:
     """
     Retrieves a list of items from the blob store based on the provided options.
 
@@ -136,8 +136,8 @@ def list(options: dict = None, timeout: int = 10) -> dict:
     Example:
         >>> list({"limit": "4", "cursor": "cursor_string_here"})
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
@@ -197,8 +197,8 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         >>> with open('test.txt', 'rb') as f:
         >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"}, verbose=True)
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(path) == type(""), "path must be a string object"
     assert type(data) == type(b""), "data must be a bytes object"
@@ -251,8 +251,8 @@ def head(url: str, options: dict = None, timeout: int = 10) -> dict:
     Example:
         >>> head("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(url) == type(""), "url must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
@@ -295,8 +295,8 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
     Example:
         >>> delete("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
@@ -347,9 +347,9 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
     Example:
         >>> copy("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "copy-test/test.txt", {"addRandomSuffix": "false"}, verbose=True)
     """
-    if options is None:  
-        options = {} 
-    
+    if options is None:
+        options = {}
+
     assert type(blob_url) == type(""), "blob_url must be a string object"
     assert type(to_path) == type(""), "to_path must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
@@ -404,8 +404,8 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
     Example:
         >>> download_file("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "path/to/save/", options={"token": "my_token"}, verbose=True)
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(url) == type(""), "url must be a string object"
     assert type(path) == type(""), "path must be a string object"
