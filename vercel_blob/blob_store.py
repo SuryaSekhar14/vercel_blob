@@ -441,7 +441,7 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
         except FileNotFoundError as e:
             if _DEBUG:
                 print(f"An error occurred. Please try again. Error: {e}")
-            raise BlobFileError("The directory must exist before downloading the file. Please create the directory and try again.")
+            raise BlobFileError("The directory must exist before downloading the file. Please create the directory and try again.") from e
     except Exception as e:
         if _DEBUG:
             print(f"An error occurred. Please try again. Error: {e}")
