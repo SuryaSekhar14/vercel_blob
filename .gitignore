@@ -1,6 +1,8 @@
 __pycache__/
 venv/
+.venv/
 .env
 dist/
 pvt.py
 .DS_Store
+examples

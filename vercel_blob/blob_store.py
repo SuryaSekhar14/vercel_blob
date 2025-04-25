@@ -1,4 +1,4 @@
-# pylint: disable=line-too-long, unidiomatic-typecheck, dangerous-default-value
+# pylint: disable=line-too-long, unidiomatic-typecheck
 
 
 '''
@@ -19,7 +19,8 @@ import time
 from mimetypes import guess_type
 import requests
 from tqdm import tqdm
-from vercel_blob.progress import ProgressFile
+from vercel_blob.progress import ProgressFile, _default_colors
+from vercel_blob.errors import BlobConfigError, BlobRequestError, BlobFileError, InvalidColorError
 
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
 _API_VERSION = '7'
@@ -33,7 +34,7 @@ def _get_auth_token_from_env() -> str:
     token = os.environ.get('BLOB_READ_WRITE_TOKEN')
 
     if not token:
-        raise Exception('BLOB_READ_WRITE_TOKEN environment variable not set')
+        raise BlobConfigError('BLOB_READ_WRITE_TOKEN environment variable not set')
 
     return token
 
@@ -68,25 +69,31 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                     data = kwargs['data']
                     total_size = len(data)
 
-                    with tqdm(total=total_size, unit='B', unit_scale=True, desc="Uploading") as pbar:
+                    with tqdm(total=total_size, unit='B', unit_scale=True,
+                            desc=f"{_default_colors.desc}Uploading\033[0m",
+                            bar_format=f"{_default_colors.text}{{l_bar}}\033[0m{_default_colors.bar}{{bar:20}}\033[0m{_default_colors.text}{{r_bar}}\033[0m",
+                            ncols=80, ascii=" █") as pbar:
                         progress_file = ProgressFile(data, pbar)
-                        
+
                         response = requests.request(
                             method,
-                            url, 
-                            data=progress_file, 
-                            timeout=timeout, 
+                            url,
+                            data=progress_file,
+                            timeout=timeout,
                             **{k:v for k,v in kwargs.items() if k != 'data'}
                         )
-                        
+
                         if response.status_code not in (502, 503, 504):
                             return response
-                
+
                 elif method == 'GET':
-                    response = requests.request(method, url, timeout=timeout, stream=True, **kwargs)
+                    response = requests.request(method, url, timeout=timeout,stream=True, **kwargs)
                     if response.status_code not in (502, 503, 504):
                         total_size = int(response.headers.get('content-length', 0))
-                        with tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading") as pbar:
+                        with tqdm(total=total_size, unit='B', unit_scale=True,
+                                desc=f"{_default_colors.desc}Downloading\033[0m",
+                                bar_format=f"{_default_colors.text}{{l_bar}}\033[0m{_default_colors.bar}{{bar:20}}\033[0m{_default_colors.text}{{r_bar}}\033[0m",
+                                ncols=80, ascii=" █") as pbar:
                             content = b''
                             for chunk in response.iter_content(chunk_size=8192):
                                 if chunk:
@@ -104,16 +111,16 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
     return None
 
 
-def _response_handler(resp: requests.Response) -> dict:
+def _response_handler(resp: requests.Response | None) -> dict:
     if resp is None:
-        raise Exception("Request failed after retries. Please try again.")
-    elif resp.status_code == 200:
-        return resp.json()
+        raise BlobRequestError("Request failed after retries. Please try again.")
+    if resp.status_code != 200:
+        raise BlobRequestError(f"An error occoured: {resp.json()}")
     else:
-        raise Exception(f"An error occoured: {resp.json()}")
+        return resp.json()
 
 
-def list(options: dict = None, timeout: int = 10) -> dict:  
+def list(options: dict = None, timeout: int = 10) -> dict:
     """
     Retrieves a list of items from the blob store based on the provided options.
 
@@ -136,8 +143,8 @@ def list(options: dict = None, timeout: int = 10) -> dict:
     Example:
         >>> list({"limit": "4", "cursor": "cursor_string_here"})
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
@@ -197,8 +204,8 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         >>> with open('test.txt', 'rb') as f:
         >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"}, verbose=True)
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(path) == type(""), "path must be a string object"
     assert type(data) == type(b""), "data must be a bytes object"
@@ -251,8 +258,8 @@ def head(url: str, options: dict = None, timeout: int = 10) -> dict:
     Example:
         >>> head("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(url) == type(""), "url must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
@@ -295,8 +302,8 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
     Example:
         >>> delete("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt")
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
@@ -347,9 +354,9 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
     Example:
         >>> copy("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "copy-test/test.txt", {"addRandomSuffix": "false"}, verbose=True)
     """
-    if options is None:  
-        options = {} 
-    
+    if options is None:
+        options = {}
+
     assert type(blob_url) == type(""), "blob_url must be a string object"
     assert type(to_path) == type(""), "to_path must be a string object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
@@ -404,8 +411,8 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
     Example:
         >>> download_file("https://blobstore.public.blob.vercel-storage.com/test-folder/test.txt", "path/to/save/", options={"token": "my_token"}, verbose=True)
     """
-    if options is None:  
-        options = {} 
+    if options is None:
+        options = {}
 
     assert type(url) == type(""), "url must be a string object"
     assert type(path) == type(""), "path must be a string object"
@@ -434,8 +441,24 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
         except FileNotFoundError as e:
             if _DEBUG:
                 print(f"An error occurred. Please try again. Error: {e}")
-            raise Exception("The directory must exist before downloading the file. Please create the directory and try again.")
+            raise BlobFileError("The directory must exist before downloading the file. Please create the directory and try again.") from e
     except Exception as e:
         if _DEBUG:
             print(f"An error occurred. Please try again. Error: {e}")
-        raise Exception("An error occurred. Please try again.")
+        raise BlobRequestError("An error occurred. Please try again.") from e
+
+
+def set_progress_bar_colours(desc=None, bar=None, text=None):
+    """
+    Set the colors for all progress bars.
+    
+    Args:
+        desc (str, optional): Color code for description (hex or ANSI)
+        bar (str, optional): Color code for progress bar (hex or ANSI)
+        text (str, optional): Color code for progress text (hex or ANSI)
+    """
+    try:
+        _default_colors.set_colors(desc, bar, text)
+    except InvalidColorError as e:
+        print(f"\033[1;31mWarning: Invalid color configuration: {e}\033[0m")
+        print("\033[1;31mUsing default colors instead\033[0m")
