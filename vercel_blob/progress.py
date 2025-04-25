@@ -1,3 +1,10 @@
+'''
+This module provides a file object wrapper class that tracks upload progress.
+
+The ProgressFile class processes byte data like a file object while displaying upload progress
+through a tqdm progress bar.
+'''
+
 class ProgressFile:
     """
     A file object wrapper class that tracks upload progress.

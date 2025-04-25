@@ -5,3 +5,4 @@ venv/
 dist/
 pvt.py
 .DS_Store
+examples
