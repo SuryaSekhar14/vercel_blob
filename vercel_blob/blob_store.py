@@ -1,4 +1,4 @@
-# pylint: disable=line-too-long, unidiomatic-typecheck, dangerous-default-value
+# pylint: disable=line-too-long, unidiomatic-typecheck
 
 
 '''
@@ -19,8 +19,8 @@ import time
 from mimetypes import guess_type
 import requests
 from tqdm import tqdm
-from vercel_blob.progress import ProgressFile
-from vercel_blob.errors import BlobConfigError, BlobRequestError, BlobFileError
+from vercel_blob.progress import ProgressFile, _default_colors
+from vercel_blob.errors import BlobConfigError, BlobRequestError, BlobFileError, InvalidColorError
 
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
 _API_VERSION = '7'
@@ -69,7 +69,10 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                     data = kwargs['data']
                     total_size = len(data)
 
-                    with tqdm(total=total_size, unit='B', unit_scale=True, desc="Uploading") as pbar:
+                    with tqdm(total=total_size, unit='B', unit_scale=True,
+                            desc=f"{_default_colors.desc}Uploading\033[0m",
+                            bar_format=f"{_default_colors.text}{{l_bar}}\033[0m{_default_colors.bar}{{bar:20}}\033[0m{_default_colors.text}{{r_bar}}\033[0m",
+                            ncols=80, ascii=" █") as pbar:
                         progress_file = ProgressFile(data, pbar)
 
                         response = requests.request(
@@ -87,7 +90,10 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                     response = requests.request(method, url, timeout=timeout,stream=True, **kwargs)
                     if response.status_code not in (502, 503, 504):
                         total_size = int(response.headers.get('content-length', 0))
-                        with tqdm(total=total_size, unit='B', unit_scale=True, desc="Downloading") as pbar:
+                        with tqdm(total=total_size, unit='B', unit_scale=True,
+                                desc=f"{_default_colors.desc}Downloading\033[0m",
+                                bar_format=f"{_default_colors.text}{{l_bar}}\033[0m{_default_colors.bar}{{bar:20}}\033[0m{_default_colors.text}{{r_bar}}\033[0m",
+                                ncols=80, ascii=" █") as pbar:
                             content = b''
                             for chunk in response.iter_content(chunk_size=8192):
                                 if chunk:
@@ -105,13 +111,13 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
     return None
 
 
-def _response_handler(resp: requests.Response) -> dict:
+def _response_handler(resp: requests.Response | None) -> dict:
     if resp is None:
         raise BlobRequestError("Request failed after retries. Please try again.")
-    elif resp.status_code == 200:
-        return resp.json()
-    else:
+    if resp.status_code != 200:
         raise BlobRequestError(f"An error occoured: {resp.json()}")
+    else:
+        return resp.json()
 
 
 def list(options: dict = None, timeout: int = 10) -> dict:
@@ -440,3 +446,19 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
         if _DEBUG:
             print(f"An error occurred. Please try again. Error: {e}")
         raise BlobRequestError("An error occurred. Please try again.")
+
+
+def set_progress_bar_colours(desc=None, bar=None, text=None):
+    """
+    Set the colors for all progress bars.
+    
+    Args:
+        desc (str, optional): Color code for description (hex or ANSI)
+        bar (str, optional): Color code for progress bar (hex or ANSI)
+        text (str, optional): Color code for progress text (hex or ANSI)
+    """
+    try:
+        _default_colors.set_colors(desc, bar, text)
+    except InvalidColorError as e:
+        print(f"\033[1;31mWarning: Invalid color configuration: {e}\033[0m")
+        print("\033[1;31mUsing default colors instead\033[0m")

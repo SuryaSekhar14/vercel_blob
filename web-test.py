@@ -11,13 +11,18 @@ Use this to test the code.
 import vercel_blob
 import dotenv
 import pprint
-from flask import Flask, request, redirect
+from flask import Flask, request
 
-# dotenv.load_dotenv()
+# Set custom colors for progress bars using hex codes
+vercel_blob.set_progress_bar_colours(
+    desc="#FFFFFF",
+    bar="#000000",
+    text="#FF0000"
+)
+
 app = Flask(__name__)
 dotenv.load_dotenv()
-
-# print(os.environ.get('DEBUG'))
+print("Using vercel_blob version:", vercel_blob.__version__)
 
 # HTML template for the main page
 INDEX_HTML = """
@@ -27,15 +32,15 @@ INDEX_HTML = """
     <title>Vercel Blob Operations</title>
     <style>
         body { font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        h1 { color: #0070f3; }
+        h1 { color: #9c27b0; }
         .section { margin-bottom: 30px; padding: 15px; border: 1px solid #eaeaea; border-radius: 5px; }
-        button, input[type="submit"] { background-color: #0070f3; color: white; border: none; padding: 8px 16px; 
+        button, input[type="submit"] { background-color: #9c27b0; color: white; border: none; padding: 8px 16px; 
                  border-radius: 4px; cursor: pointer; }
-        button:hover, input[type="submit"]:hover { background-color: #0761d1; }
+        button:hover, input[type="submit"]:hover { background-color: #7b1fa2; }
         input[type="text"], input[type="file"] { padding: 8px; margin-bottom: 10px; width: 100%; box-sizing: border-box; }
         pre { background-color: #f1f1f1; padding: 10px; border-radius: 4px; overflow-x: auto; }
-        .highlight-button { background-color: #e00; }
-        .highlight-button:hover { background-color: #c00; }
+        .highlight-button { background-color: #f44336; }
+        .highlight-button:hover { background-color: #d32f2f; }
         a.button { text-decoration: none; display: inline-block; margin-top: 10px; }
     </style>
 </head>
@@ -49,7 +54,7 @@ INDEX_HTML = """
             <input type="text" id="cursor" name="cursor">
             <input type="submit" value="List Blobs">
         </form>
-        <a href="/manage" class="button" style="background-color: #0070f3; color: white; padding: 8px 16px; border-radius: 4px; margin-top: 10px; display: inline-block;">Manage Blobs (with Delete)</a>
+        <a href="/manage" class="button" style="background-color: #9c27b0; color: white; padding: 8px 16px; border-radius: 4px; margin-top: 10px; display: inline-block;">Manage Blobs (with Delete)</a>
     </div>
     
     <div class="section">
@@ -115,11 +120,11 @@ def result_template(title, data):
         <title>{title}</title>
         <style>
             body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
-            h1 {{ color: #0070f3; }}
+            h1 {{ color: #9c27b0; }}
             pre {{ background-color: #f1f1f1; padding: 10px; border-radius: 4px; overflow-x: auto; }}
-            a {{ display: inline-block; margin-top: 20px; background-color: #0070f3; color: white; 
+            a {{ display: inline-block; margin-top: 20px; background-color: #9c27b0; color: white; 
                 text-decoration: none; padding: 8px 16px; border-radius: 4px; }}
-            a:hover {{ background-color: #0761d1; }}
+            a:hover {{ background-color: #7b1fa2; }}
         </style>
     </head>
     <body>
@@ -154,49 +159,41 @@ def manage_blobs_template(blobs_data):
             """
     
     next_cursor = blobs_data.get("cursor", "")
-    
     return f"""
     <!DOCTYPE html>
     <html>
     <head>
         <title>Manage Blobs</title>
         <style>
-            body {{ font-family: Arial, sans-serif; max-width: 1000px; margin: 0 auto; padding: 20px; }}
-            h1 {{ color: #0070f3; }}
+            body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
+            h1 {{ color: #9c27b0; }}
             table {{ width: 100%; border-collapse: collapse; margin-top: 20px; }}
-            th, td {{ padding: 12px; text-align: left; border-bottom: 1px solid #ddd; }}
-            th {{ background-color: #f1f1f1; }}
-            tr:hover {{ background-color: #f9f9f9; }}
-            button {{ padding: 6px 12px; border: none; border-radius: 4px; cursor: pointer; }}
-            .highlight-button {{ background-color: #e00; color: white; }}
-            .highlight-button:hover {{ background-color: #c00; }}
-            a {{ display: inline-block; margin-top: 20px; background-color: #0070f3; color: white; 
-                text-decoration: none; padding: 8px 16px; border-radius: 4px; }}
-            a:hover {{ background-color: #0761d1; }}
+            th, td {{ padding: 10px; text-align: left; border-bottom: 1px solid #ddd; }}
+            th {{ background-color: #f5f5f5; }}
+            a {{ color: #9c27b0; text-decoration: none; }}
+            a:hover {{ text-decoration: underline; }}
             .pagination {{ margin-top: 20px; }}
+            .pagination a {{ display: inline-block; padding: 8px 16px; background-color: #9c27b0; color: white; 
+                          text-decoration: none; border-radius: 4px; margin-right: 5px; }}
+            .pagination a:hover {{ background-color: #7b1fa2; }}
         </style>
     </head>
     <body>
         <h1>Manage Blobs</h1>
-        
         <table>
-            <thead>
-                <tr>
-                    <th>Path/URL</th>
-                    <th>Size</th>
-                    <th>Actions</th>
-                </tr>
-            </thead>
-            <tbody>
-                {blobs_html}
-            </tbody>
+            <tr>
+                <th>Path</th>
+                <th>Size</th>
+                <th>Actions</th>
+            </tr>
+            {blobs_html}
         </table>
-        
         <div class="pagination">
+            <a href="/manage">First Page</a>
             {f'<a href="/manage?cursor={next_cursor}">Next Page</a>' if next_cursor else ''}
         </div>
-        
-        <a href="/">Back to Home</a>
+        <a href="/" style="display: inline-block; margin-top: 20px; background-color: #9c27b0; color: white; 
+           text-decoration: none; padding: 8px 16px; border-radius: 4px;">Back to Home</a>
     </body>
     </html>
     """
@@ -209,12 +206,12 @@ def delete_confirmation_template(url):
         <title>Confirm Delete</title>
         <style>
             body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }}
-            h1 {{ color: #0070f3; }}
-            .warning {{ color: #e00; font-weight: bold; }}
+            h1 {{ color: #9c27b0; }}
+            .warning {{ color: #f44336; font-weight: bold; }}
             .actions {{ margin-top: 30px; }}
             button {{ padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-right: 10px; }}
-            .delete-btn {{ background-color: #e00; color: white; }}
-            .delete-btn:hover {{ background-color: #c00; }}
+            .delete-btn {{ background-color: #f44336; color: white; }}
+            .delete-btn:hover {{ background-color: #d32f2f; }}
             .cancel-btn {{ background-color: #777; color: white; }}
             .cancel-btn:hover {{ background-color: #555; }}
             pre {{ background-color: #f1f1f1; padding: 10px; border-radius: 4px; overflow-x: auto; }}
@@ -245,7 +242,7 @@ def list_all_blobs(cursor=None):
 def upload_a_blob(file_data, filename, add_random_suffix):
     resp = vercel_blob.put(filename, file_data, {
         "addRandomSuffix": "true" if add_random_suffix else "false",
-    })
+    }, verbose=True)
     return resp
 
 def get_blob_metadata(url):
@@ -260,6 +257,10 @@ def copy_a_blob(url, target_path, add_random_suffix):
     resp = vercel_blob.copy(url, target_path, {
         "addRandomSuffix": "true" if add_random_suffix else "false"
     })
+    return resp
+
+def download_a_blob(url):
+    resp = vercel_blob.download_file(url, verbose=True)
     return resp
 
 @app.route('/')
@@ -331,9 +332,8 @@ def download():
         return "No URL provided", 400
     
     try:
-        blob_info = get_blob_metadata(url)
-        download_url = blob_info.get("downloadUrl")
-        return redirect(download_url)
+        result = download_a_blob(url)
+        return result_template("Download Results", result)
     except Exception as e:
         return result_template("Error", str(e))
 
@@ -352,4 +352,4 @@ def delete_confirm():
     return delete_confirmation_template(url)
 
 if __name__ == '__main__':
-    app.run(debug=True, port=8080)
+    app.run(debug=True, port=8080) 
