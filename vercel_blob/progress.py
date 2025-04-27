@@ -7,7 +7,7 @@ through a tqdm progress bar with enhanced visual feedback.
 
 from vercel_blob.errors import InvalidColorError
 
-def hex_to_ansi(hex_color: str) -> str:
+def _hex_to_ansi(hex_color: str) -> str:
     """
     Convert a hex color code to ANSI escape code.
     
@@ -83,27 +83,13 @@ class ColorConfig:
             InvalidColorError: If any of the provided color codes are invalid
         """
         if desc is not None:
-            self.desc = hex_to_ansi(desc) if desc.startswith('#') else desc
+            self.desc = _hex_to_ansi(desc) if desc.startswith('#') else desc
         if bar is not None:
-            self.bar = hex_to_ansi(bar) if bar.startswith('#') else bar
+            self.bar = _hex_to_ansi(bar) if bar.startswith('#') else bar
         if text is not None:
-            self.text = hex_to_ansi(text) if text.startswith('#') else text
+            self.text = _hex_to_ansi(text) if text.startswith('#') else text
 
 _default_colors = ColorConfig()
-
-def set_progress_bar_colours(desc=None, bar=None, text=None):
-    """
-    Set the colors for all progress bars.
-    
-    Args:
-        desc (str, optional): Color code for description (hex or ANSI)
-        bar (str, optional): Color code for progress bar (hex or ANSI)
-        text (str, optional): Color code for progress text (hex or ANSI)
-        
-    Raises:
-        InvalidColorError: If any of the provided color codes are invalid
-    """
-    _default_colors.set_colors(desc, bar, text)
 
 class ProgressFile:
     """
@@ -172,3 +158,5 @@ class ProgressFile:
         self.position += actual_size
         self.pbar.update(actual_size)
         return chunk
+
+__all__ = ["ProgressFile", "_default_colors"]
