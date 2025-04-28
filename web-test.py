@@ -351,9 +351,10 @@ def list_all_blobs(cursor=None):
     return blob_list
 
 def upload_a_blob(file_data, filename, add_random_suffix):
-    resp = vercel_blob.put(filename, file_data, {
-        "addRandomSuffix": "true" if add_random_suffix else "false",
-    }, verbose=True)
+    resp = vercel_blob.put(filename, 
+                           file_data, 
+                           verbose=True
+                        )
     return resp
 
 def get_blob_metadata(url):

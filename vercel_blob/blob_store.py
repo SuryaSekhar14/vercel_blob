@@ -1,6 +1,5 @@
 # pylint: disable=line-too-long, unidiomatic-typecheck
 
-
 '''
 This library provides a Python interface for interacting with the Vercel Blob Storage API. 
 
@@ -16,18 +15,26 @@ The source code for this package can be found on GitHub at: https://github.com/S
 
 import os
 import time
-from mimetypes import guess_type
+import concurrent.futures
 import requests
 from tqdm import tqdm
-from vercel_blob.progress import ProgressFile, _default_colors
-from vercel_blob.errors import BlobConfigError, BlobRequestError, BlobFileError, InvalidColorError
+from urllib.parse import urlencode
+
+from .progress import *
+from .errors import *
+from .utils import *
+
 
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
-_API_VERSION = '7'
+_API_VERSION = '10'
 _PAGINATED_LIST_SIZE = 1000
 _DEFAULT_CACHE_AGE = '31536000'
 _MAX_RETRY_REQUEST_RETRIES = 3
-_DEBUG = os.environ.get('VERCEL_BLOB_DEBUG', False)
+# _DEBUG = os.environ.get('VERCEL_BLOB_DEBUG', False)
+_DEBUG = True
+
+_MULTIPART_THRESHOLD = 25 * 1024 * 1024  # 25MB
+_MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB
 
 
 def _get_auth_token_from_env() -> str:
@@ -48,20 +55,26 @@ def _get_auth_token(options: dict) -> str:
     return _tkn
 
 
-def _guess_mime_type(url) -> str:
-    mime_type, _ = guess_type(url, strict=False)
-
-    if mime_type:
-        return mime_type
-    else:
-        return "application/octet-stream"
-
-
 def _get_script_path() -> str:
     return os.getcwd() + '/'
 
 
 def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: int = 10, verbose: bool = False, **kwargs) -> requests.Response:
+    """
+    Factory function to create and send HTTP requests with retry logic.
+    
+    Args:
+        url (str): The URL to send the request to
+        method (str): The HTTP method to use
+        backoff_factor (int): Factor to use for exponential backoff
+        timeout (int): Timeout in seconds
+        verbose (bool): Whether to show progress
+        **kwargs: Additional arguments to pass to requests
+        
+    Returns:
+        requests.Response: The response from the request
+    """
+   
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
         try:
             if verbose:
@@ -87,7 +100,7 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                             return response
 
                 elif method == 'GET':
-                    response = requests.request(method, url, timeout=timeout,stream=True, **kwargs)
+                    response = requests.request(method, url, timeout=timeout, stream=True, **kwargs)
                     if response.status_code not in (502, 503, 504):
                         total_size = int(response.headers.get('content-length', 0))
                         with tqdm(total=total_size, unit='B', unit_scale=True,
@@ -177,9 +190,203 @@ def list(options: dict = None, timeout: int = 10) -> dict:
     return _response_handler(resp)
 
 
+def _create_multipart_upload(path: str, headers: dict, options: dict) -> dict:
+    """
+    Initiates a multipart upload session.
+    
+    Args:
+        path (str): The path where the file will be uploaded
+        headers (dict): Headers for the request
+        options (dict): Additional options
+        
+    Returns:
+        dict: Response containing uploadId and other metadata
+    """
+    validate_pathname(path)
+    
+    mpu_headers = headers.copy()
+    mpu_headers['x-mpu-action'] = 'create'
+    
+    # Add request ID to headers
+    token = _get_auth_token(options)
+    request_id = generate_request_id(token)
+    mpu_headers['x-api-blob-request-id'] = request_id
+    mpu_headers['x-api-blob-request-attempt'] = '0'
+    
+    # Create full URL with query parameters
+    query_string = urlencode({'pathname': path}, doseq=True)
+    url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?{query_string}"
+    
+    # Debug the request
+    if _DEBUG:
+        print("Creating MPU with:")
+        print(f"URL: {url}")
+        print(f"Headers: {mpu_headers}")
+        print(f"Request ID: {request_id}")
+    
+    try:
+        resp = _request_factory(
+            f"{_VERCEL_BLOB_API_BASE_URL}/mpu?pathname={path}",
+            'POST',
+            headers=mpu_headers,
+            timeout=options.get('timeout', 10),
+        )
+        
+        if _DEBUG:
+            print(f"Response status: {resp.status_code if resp else 'None'}")
+            if resp:
+                print(f"Response headers: {resp.headers}")
+                try:
+                    print(f"Response body: {resp.json()}")
+                except:
+                    print("Could not parse response as JSON")
+        
+        return _response_handler(resp)
+    except Exception as e:
+        if _DEBUG:
+            print(f"Error in create_multipart_upload: {str(e)}")
+        raise
+
+
+def _upload_part(path: str, upload_id: str, key: str, part_number: int, data: bytes, headers: dict, options: dict, verbose: bool = False) -> dict:
+    """
+    Uploads a single part of a multipart upload.
+    
+    Args:
+        path (str): The path where the file will be uploaded
+        upload_id (str): The upload ID from create_multipart_upload
+        key (str): The key from create_multipart_upload
+        part_number (int): The part number (1-based)
+        data (bytes): The data to upload
+        headers (dict): Headers for the request
+        options (dict): Additional options
+        verbose (bool): Whether to show progress
+        
+    Returns:
+        dict: Response containing part information
+    """
+    # Validate pathname first
+    validate_pathname(path)
+
+    part_headers = headers.copy()
+    part_headers['x-mpu-action'] = 'upload'
+    part_headers['x-mpu-upload-id'] = upload_id
+    part_headers['x-mpu-key'] = requests.utils.quote(key)
+    part_headers['x-mpu-part-number'] = str(part_number)
+    part_headers['Content-Type'] = 'application/octet-stream'
+
+    token = _get_auth_token(options)
+    request_id = generate_request_id(token)
+    part_headers['x-api-blob-request-id'] = request_id
+    part_headers['x-api-blob-request-attempt'] = '0'
+    
+    url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?pathname={path}"
+
+    if _DEBUG:
+        print(f"Uploading part {part_number}:")
+        print(f"URL: {url}")
+        print(f"Data length: {len(data)} bytes")
+        print(f"Upload ID: {upload_id}")
+
+    resp = _request_factory(
+        url,
+        'POST',
+        headers=part_headers,
+        data=data,
+        timeout=options.get('timeout', 30),
+        verbose=verbose,
+    )
+
+    response_data = _response_handler(resp)
+
+    if _DEBUG:
+        print(f"Part {part_number} upload response: {response_data}")
+
+    # We need to extract the ETag from the response
+    # In the current implementation, we're getting a full file response
+    # Let's extract the etag from headers first
+    etag = None
+
+    # Try to get etag from response headers if available in resp
+    if hasattr(resp, 'headers') and resp.headers.get('etag'):
+        etag = resp.headers.get('etag')
+    elif isinstance(response_data, dict):
+        # Try to find etag in the response data
+        if 'etag' in response_data:
+            etag = response_data['etag']
+        elif 'ETag' in response_data:
+            etag = response_data['ETag']
+
+    # If we still don't have an etag, generate one based on part number
+    if not etag:
+        # This is a fallback - the server should provide an etag
+        etag = f"\"part-{part_number}-{int(time.time())}\""
+        if _DEBUG:
+            print(f"Warning: Using fallback etag {etag} for part {part_number}")
+
+    return {"partNumber": part_number, "etag": etag}
+
+
+def _complete_multipart_upload(path: str, upload_id: str, key: str, parts: list, headers: dict, options: dict) -> dict:
+    """
+    Completes a multipart upload.
+    
+    Args:
+        path (str): The path where the file was uploaded
+        upload_id (str): The upload ID from create_multipart_upload
+        key (str): The key from create_multipart_upload
+        parts (list): List of uploaded parts
+        headers (dict): Headers for the request
+        options (dict): Additional options
+        
+    Returns:
+        dict: Final response containing the uploaded file information
+    """
+    # Validate pathname first
+    validate_pathname(path)
+
+    complete_headers = headers.copy()
+    complete_headers['x-mpu-action'] = 'complete'
+    complete_headers['x-mpu-upload-id'] = upload_id
+    complete_headers['x-mpu-key'] = requests.utils.quote(key)  # URL encode the key
+    complete_headers['content-type'] = 'application/json'
+
+    # Add request ID to headers
+    token = _get_auth_token(options)
+    request_id = generate_request_id(token)
+    complete_headers['x-api-blob-request-id'] = request_id
+    complete_headers['x-api-blob-request-attempt'] = '0'
+
+    # Create URL for completion
+    url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?pathname={path}"
+
+    if _DEBUG:
+        print(f"Completing multipart upload:")
+        print(f"Parts: {parts}")
+
+    # Format the parts array - make sure structure matches what's expected
+    formatted_parts = []
+    for part in parts:
+        if isinstance(part, dict) and 'partNumber' in part and 'etag' in part:
+            formatted_parts.append({
+                'partNumber': part['partNumber'],
+                'etag': part['etag']
+            })
+
+    resp = _request_factory(
+        url,
+        'POST',
+        headers=complete_headers,
+        json=formatted_parts,
+        timeout=options.get('timeout', 10),
+    )
+    return _response_handler(resp)
+
+
 def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose: bool = False) -> dict:
     """
     Uploads the given data to the specified path in the Vercel Blob Store.
+    For files larger than 25MB, uses multipart upload.
 
     Args:
         path (str): The path inside the blob store, where the data will be uploaded.
@@ -189,6 +396,8 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
             -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "true".
             -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
+            -> `allowOverwrite` (str, optional): A boolean value to specify if an existing file should be overwritten. Defaults to "false".
+            -> `maxConcurrentUploads` (int, optional): Maximum number of concurrent part uploads. Defaults to 5.
         timeout (int, optional): The timeout for the request. Defaults to 10.
         verbose (bool, optional): Whether to show detailed information during upload. Defaults to False.
             
@@ -211,22 +420,100 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
     assert type(data) == type(b""), "data must be a bytes object"
     assert type(options) == type({}), "Options passed must be a Dictionary Object"
 
+    # Get max concurrent uploads (default to 5)
+    max_concurrent_uploads = options.get('maxConcurrentUploads', 5)
+    if not isinstance(max_concurrent_uploads, int) or max_concurrent_uploads < 1:
+        max_concurrent_uploads = 5
+
     headers = {
         "access": "public",  # Support for private is not yet there, according to Vercel docs at time of writing this code
         "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
-        "x-content-type": _guess_mime_type(path),
+        "x-content-type": guess_mime_type(path),
         "x-cache-control-max-age": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
     }
 
     if options.get('addRandomSuffix') in ("false", False, "0"):
         headers['x-add-random-suffix'] = "0"
+        
+    if options.get('allowOverwrite') in ("true", True, "1"):
+        headers['x-allow-overwrite'] = "1"
 
     if _DEBUG:
         print("Headers: " + str(headers))
 
+    # Use multipart upload for large files
+    if len(data) > _MULTIPART_THRESHOLD:
+        if verbose:
+            print(f"File size ({len(data) / (1024*1024):.2f}MB) exceeds threshold ({_MULTIPART_THRESHOLD / (1024*1024)}MB), using multipart upload")
+            print(f"Using {max_concurrent_uploads} concurrent uploads")
+        
+        # Create multipart upload
+        upload_info = _create_multipart_upload(path, headers, options)
+        if _DEBUG:
+            print(f"Create multipart upload response: {upload_info}")
+            
+        if 'uploadId' not in upload_info or 'key' not in upload_info:
+            raise BlobRequestError(f"Invalid response from create multipart upload: {upload_info}")
+            
+        upload_id = upload_info['uploadId']
+        key = upload_info['key']
+        
+        # Split data into chunks and upload parts
+        total_parts = (len(data) + _MULTIPART_CHUNK_SIZE - 1) // _MULTIPART_CHUNK_SIZE
+        
+        if verbose:
+            print(f"Uploading {total_parts} parts with {max_concurrent_uploads} concurrent uploads...")
+            pbar = tqdm(total=len(data), unit='B', unit_scale=True,
+                       desc=f"{_default_colors.desc}Uploading parts\033[0m",
+                       bar_format=f"{_default_colors.text}{{l_bar}}\033[0m{_default_colors.bar}{{bar:20}}\033[0m{_default_colors.text}{{r_bar}}\033[0m",
+                       ncols=80, ascii=" █")
+        
+        # Prepare chunks
+        chunks = []
+        for i in range(total_parts):
+            start = i * _MULTIPART_CHUNK_SIZE
+            end = min(start + _MULTIPART_CHUNK_SIZE, len(data))
+            chunks.append((i + 1, data[start:end]))
+        
+        # Upload parts in parallel using ThreadPoolExecutor
+        parts = [None] * total_parts  # Pre-allocate the parts list
+        
+        # Function to upload a part and update progress
+        def upload_part_with_progress(args):
+            part_number, chunk = args
+            part_info = _upload_part(path, upload_id, key, part_number, chunk, headers, options, verbose=False)
+            if verbose:
+                pbar.update(len(chunk))
+            return part_number - 1, part_info  # Return index and part info
+        
+        # Use ThreadPoolExecutor for parallel uploads
+        with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrent_uploads) as executor:
+            # Submit all upload tasks
+            future_to_part = {executor.submit(upload_part_with_progress, chunk_info): chunk_info[0] for chunk_info in chunks}
+            
+            # Process completed uploads as they finish
+            for future in concurrent.futures.as_completed(future_to_part):
+                try:
+                    index, part_info = future.result()
+                    parts[index] = part_info
+                    if _DEBUG:
+                        print(f"Part {index + 1} completed: {part_info}")
+                except Exception as exc:
+                    part_num = future_to_part[future]
+                    print(f"Error uploading part {part_num}: {exc}")
+                    raise
+        
+        if verbose:
+            pbar.close()
+            print("All parts uploaded. Completing multipart upload...")
+        
+        # Complete multipart upload
+        return _complete_multipart_upload(path, upload_id, key, parts, headers, options)
+    
+    # Regular upload for small files
     resp = _request_factory(
-        f"{_VERCEL_BLOB_API_BASE_URL}/{path}",
+        f"{_VERCEL_BLOB_API_BASE_URL}/?pathname={path}",
         'PUT',
         headers=headers,
         data=data,
@@ -365,7 +652,7 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
         "access": "public",
         "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
-        "x-content-type": _guess_mime_type(blob_url),
+        "x-content-type": guess_mime_type(blob_url),
         "x-cache-control-max-age": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
     }
 
@@ -377,7 +664,7 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
 
     to_path_encoded = requests.utils.quote(to_path)
     resp = _request_factory(
-        f"{_VERCEL_BLOB_API_BASE_URL}/{to_path_encoded}",
+        f"{_VERCEL_BLOB_API_BASE_URL}/?pathname={to_path_encoded}",
         'PUT',
         headers=headers,
         params={"fromUrl": blob_url},
