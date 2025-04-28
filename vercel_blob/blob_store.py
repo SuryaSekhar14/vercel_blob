@@ -24,14 +24,11 @@ from .progress import _default_colors, ProgressFile
 from .errors import *
 from .utils import *
 
-
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
 _API_VERSION = '10'
 _PAGINATED_LIST_SIZE = 1000
 _DEFAULT_CACHE_AGE = '31536000'
 _MAX_RETRY_REQUEST_RETRIES = 3
-# _DEBUG = os.environ.get('VERCEL_BLOB_DEBUG', False)
-_DEBUG = True
 
 _MULTIPART_THRESHOLD = 25 * 1024 * 1024  # 25MB
 _MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB
@@ -80,30 +77,34 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
 
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
         try:
-            if verbose:
-                if method in ['PUT', 'POST'] and 'data' in kwargs:
+            # Create a new session for each attempt
+            with requests.Session() as session:
+                # Handle upload with progress bar
+                if verbose and method in ['PUT', 'POST'] and 'data' in kwargs:
                     data = kwargs['data']
                     total_size = len(data)
-
+                    
                     with tqdm(total=total_size, unit='B', unit_scale=True,
                             desc=f"{_default_colors.desc}Uploading{NC}",
                             bar_format=f"{_default_colors.text}{{l_bar}}{NC}{_default_colors.bar}{{bar:20}}{NC}{_default_colors.text}{{r_bar}}{NC}",
                             ncols=80, ascii=" █") as pbar:
                         progress_file = ProgressFile(data, pbar)
-
-                        response = requests.request(
+                        
+                        # Use the session for the request
+                        response = session.request(
                             method,
                             url,
                             data=progress_file,
                             timeout=timeout,
                             **{k:v for k,v in kwargs.items() if k != 'data'}
                         )
-
+                        
                         if response.status_code not in (502, 503, 504):
                             return response
-
-                elif method == 'GET':
-                    response = requests.request(method, url, timeout=timeout, stream=True, **kwargs)
+                
+                # Handle download with progress bar
+                elif verbose and method == 'GET':
+                    response = session.request(method, url, timeout=timeout, stream=True, **kwargs)
                     if response.status_code not in (502, 503, 504):
                         total_size = int(response.headers.get('content-length', 0))
                         with tqdm(total=total_size, unit='B', unit_scale=True,
@@ -117,13 +118,17 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                                     pbar.update(len(chunk))
                             response._content = content
                             return response
-            else:
-                response = requests.request(method, url, timeout=timeout, **kwargs)
-                if response.status_code not in (502, 503, 504):
-                    return response
+                
+                # Simple request without progress tracking
+                else:
+                    response = session.request(method, url, timeout=timeout, **kwargs)
+                    if response.status_code not in (502, 503, 504):
+                        return response
+                        
         except requests.exceptions.RequestException as e:
             print(f"Request failed on attempt {attempt} ({e})")
             time.sleep(backoff_factor * attempt)
+            
     return None
 
 
@@ -179,8 +184,7 @@ def list(options: dict = None, timeout: int = 10) -> dict:
     if options.get('mode'):
         params['mode'] = options['mode']
 
-    if _DEBUG:
-        print("Headers: " + str(headers))
+    debug("Headers: " + str(headers))
 
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}",
@@ -221,11 +225,10 @@ def _create_multipart_upload(path: str, headers: dict, options: dict) -> dict:
     url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?{query_string}"
 
     # Debug the request
-    if _DEBUG:
-        print("Creating MPU with:")
-        print(f"URL: {url}")
-        print(f"Headers: {mpu_headers}")
-        print(f"Request ID: {request_id}")
+    debug("Creating MPU with:")
+    debug(f"URL: {url}")
+    debug(f"Headers: {mpu_headers}")
+    debug(f"Request ID: {request_id}")
 
     try:
         resp = _request_factory(
@@ -235,20 +238,18 @@ def _create_multipart_upload(path: str, headers: dict, options: dict) -> dict:
             timeout=options.get('timeout', 10),
         )
 
-        if _DEBUG:
-            print(f"Response status: {resp.status_code if resp else 'None'}")
-            if resp:
-                print(f"Response headers: {resp.headers}")
-                try:
-                    print(f"Response body: {resp.json()}")
-                except:
-                    print("Could not parse response as JSON")
+        debug(f"Response status: {resp.status_code if resp else 'None'}")
+        if resp:
+            debug(f"Response headers: {resp.headers}")
+            try:
+                debug(f"Response body: {resp.json()}")
+            except:
+                debug("Could not parse response as JSON")
 
         return _response_handler(resp)
     except Exception as e:
-        if _DEBUG:
-            print(f"Error in create_multipart_upload: {str(e)}")
-        raise
+        debug(f"Error in create_multipart_upload: {str(e)}")
+        raise BlobRequestError(f"Error in create_multipart_upload: {str(e)}") from e
 
 
 def _upload_part(path: str, upload_id: str, key: str, part_number: int, data: bytes, headers: dict, options: dict, verbose: bool = False) -> dict:
@@ -285,11 +286,10 @@ def _upload_part(path: str, upload_id: str, key: str, part_number: int, data: by
 
     url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?pathname={path}"
 
-    if _DEBUG:
-        print(f"Uploading part {part_number}:")
-        print(f"URL: {url}")
-        print(f"Data length: {len(data)} bytes")
-        print(f"Upload ID: {upload_id}")
+    debug(f"Uploading part {part_number}:")
+    debug(f"URL: {url}")
+    debug(f"Data length: {len(data)} bytes")
+    debug(f"Upload ID: {upload_id}")
 
     resp = _request_factory(
         url,
@@ -302,8 +302,7 @@ def _upload_part(path: str, upload_id: str, key: str, part_number: int, data: by
 
     response_data = _response_handler(resp)
 
-    if _DEBUG:
-        print(f"Part {part_number} upload response: {response_data}")
+    debug(f"Part {part_number} upload response: {response_data}")
 
     # We need to extract the ETag from the response
     # In the current implementation, we're getting a full file response
@@ -324,8 +323,7 @@ def _upload_part(path: str, upload_id: str, key: str, part_number: int, data: by
     if not etag:
         # This is a fallback - the server should provide an etag
         etag = f"\"part-{part_number}-{int(time.time())}\""
-        if _DEBUG:
-            print(f"Warning: Using fallback etag {etag} for part {part_number}")
+        debug(f"Warning: Using fallback etag {etag} for part {part_number}")
 
     return {"partNumber": part_number, "etag": etag}
 
@@ -363,9 +361,8 @@ def _complete_multipart_upload(path: str, upload_id: str, key: str, parts: list,
     # Create URL for completion
     url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?pathname={path}"
 
-    if _DEBUG:
-        print(f"Completing multipart upload:")
-        print(f"Parts: {parts}")
+    debug(f"Completing multipart upload:")
+    debug(f"Parts: {parts}")
 
     # Format the parts array - make sure structure matches what's expected
     formatted_parts = []
@@ -442,19 +439,17 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
     if options.get('allowOverwrite') in ("true", True, "1"):
         headers['x-allow-overwrite'] = "1"
 
-    if _DEBUG:
-        print("Headers: " + str(headers))
+    debug("Headers: " + str(headers))
 
     # Use multipart upload for large files
     if len(data) > _MULTIPART_THRESHOLD:
         if verbose:
-            print(f"File size ({len(data) / (1024*1024):.2f}MB) exceeds threshold ({_MULTIPART_THRESHOLD / (1024*1024)}MB), using multipart upload")
-            print(f"Using {max_concurrent_uploads} concurrent uploads")
+            debug(f"File size ({len(data) / (1024*1024):.2f}MB) exceeds threshold ({_MULTIPART_THRESHOLD / (1024*1024)}MB), using multipart upload")
+            debug(f"Using {max_concurrent_uploads} concurrent uploads")
 
         # Create multipart upload
         upload_info = _create_multipart_upload(path, headers, options)
-        if _DEBUG:
-            print(f"Create multipart upload response: {upload_info}")
+        debug(f"Create multipart upload response: {upload_info}")
 
         if 'uploadId' not in upload_info or 'key' not in upload_info:
             raise BlobRequestError(f"Invalid response from create multipart upload: {upload_info}")
@@ -466,7 +461,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         total_parts = (len(data) + _MULTIPART_CHUNK_SIZE - 1) // _MULTIPART_CHUNK_SIZE
 
         if verbose:
-            print(f"Uploading {total_parts} parts with {max_concurrent_uploads} concurrent uploads...")
+            debug(f"Uploading {total_parts} parts with {max_concurrent_uploads} concurrent uploads...")
             pbar = tqdm(total=len(data), unit='B', unit_scale=True,
                        desc=f"{_default_colors.desc}Uploading parts{NC}",
                        bar_format=f"{_default_colors.text}{{l_bar}}{NC}{_default_colors.bar}{{bar:20}}{NC}{_default_colors.text}{{r_bar}}{NC}",
@@ -500,8 +495,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
                 try:
                     index, part_info = future.result()
                     parts[index] = part_info
-                    if _DEBUG:
-                        print(f"Part {index + 1} completed: {part_info}")
+                    debug(f"Part {index + 1} completed: {part_info}")
                 except Exception as exc:
                     part_num = future_to_part[future]
                     print(f"Error uploading part {part_num}: {exc}")
@@ -509,7 +503,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
 
         if verbose:
             pbar.close()
-            print("All parts uploaded. Completing multipart upload...")
+            debug("All parts uploaded. Completing multipart upload...")
 
         # Complete multipart upload
         return _complete_multipart_upload(path, upload_id, key, parts, headers, options)
@@ -559,8 +553,7 @@ def head(url: str, options: dict = None, timeout: int = 10) -> dict:
         "x-api-version": _API_VERSION,
     }
 
-    if _DEBUG:
-        print("Headers: " + str(headers))
+    debug("Headers: " + str(headers))
 
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/?url={url}",
@@ -603,8 +596,7 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
     }
 
     if type(url) == type("") or (type(url) == type([]) and all(isinstance(u, str) for u in url)):
-        if _DEBUG:
-            print("Headers: " + str(headers))
+        debug("Headers: " + str(headers))
 
         resp = _request_factory(
             f"{_VERCEL_BLOB_API_BASE_URL}/delete",
@@ -662,8 +654,7 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
     if options.get('addRandomSuffix') != None:
         headers['x-add-random-suffix'] = "1"
 
-    if _DEBUG:
-        print("Headers: " + str(headers))
+    debug("Headers: " + str(headers))
 
     to_path_encoded = requests.utils.quote(to_path)
     resp = _request_factory(
@@ -715,8 +706,7 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
         assert path.endswith('/'), "path must be a valid directory path, ending with '/'"
         assert os.path.exists(path_to_save), "path must be a valid directory path"
 
-    if _DEBUG:
-        print(f"Downloading file from {url} to {path_to_save}")
+    debug(f"Downloading file from {url} to {path_to_save}")
 
     try:
         resp = _request_factory(
@@ -729,12 +719,10 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
             with open(f"{path_to_save}{url.split('/')[-1]}", 'wb') as f:
                 f.write(resp)
         except FileNotFoundError as e:
-            if _DEBUG:
-                print(f"An error occurred. Please try again. Error: {e}")
+            debug(f"An error occurred. Please try again. Error: {e}")
             raise BlobFileError("The directory must exist before downloading the file. Please create the directory and try again.") from e
     except Exception as e:
-        if _DEBUG:
-            print(f"An error occurred. Please try again. Error: {e}")
+        debug(f"An error occurred. Please try again. Error: {e}")
         raise BlobRequestError("An error occurred. Please try again.") from e
 
 
@@ -751,4 +739,4 @@ def set_progress_bar_colours(desc=None, bar=None, text=None):
         _default_colors.set_colors(desc, bar, text)
     except InvalidColorError as e:
         print(f"{RED}Warning: Invalid color configuration: {e}{NC}")
-        print("{RED}Using default colors instead{NC}")
+        print(f"{RED}Using default colors instead{NC}")

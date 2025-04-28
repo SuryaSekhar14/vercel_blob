@@ -2,6 +2,7 @@
 Utility functions for the Vercel Blob Storage API.
 """
 
+import os
 import time
 import random
 import math
@@ -10,6 +11,8 @@ from .errors import BlobRequestError
 
 _DISALLOWED_PATHNAME_CHARACTERS = ["//"]
 _MAXIMUM_PATHNAME_LENGTH = 950
+
+_DEBUG = os.environ.get('VERCEL_BLOB_DEBUG', False)
 
 
 def guess_mime_type(url) -> str:
@@ -71,4 +74,15 @@ def generate_request_id(token):
     return f"{store_id}:{timestamp}:{random_hex}"
 
 
-__all__ = ["guess_mime_type", "validate_pathname", "generate_request_id"]
+def debug(message: str) -> None:
+    """
+    Prints debug message if the VERCEL_BLOB_DEBUG environment variable is set.
+    
+    Args:
+        message (str): The debug message to print
+    """
+    if _DEBUG:
+        print(message)
+
+
+__all__ = ["guess_mime_type", "validate_pathname", "generate_request_id", "debug"]

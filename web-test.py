@@ -17,13 +17,14 @@ import os
 # Set custom colors for progress bars using hex codes
 vercel_blob.set_progress_bar_colours(
     desc="#FFFFFF",
-    bar="#000000",
+    bar="#0055CC",
     text="#FF0000"
 )
 
 app = Flask(__name__)
 dotenv.load_dotenv()
 print("Using vercel_blob version:", vercel_blob.__version__)
+print("Token present:", "yes" if os.environ.get('BLOB_READ_WRITE_TOKEN') else "no")
 print("VERCEL_BLOB_DEBUG Debug mode:", os.environ.get('VERCEL_BLOB_DEBUG'))
 
 # Function to generate the index HTML with blob list
@@ -368,7 +369,7 @@ def delete_a_blob(url):
 def copy_a_blob(url, target_path, add_random_suffix):
     resp = vercel_blob.copy(url, target_path, {
         "addRandomSuffix": "true" if add_random_suffix else "false"
-    })
+    }, verbose=True)
     return resp
 
 def download_a_blob(url):
