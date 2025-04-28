@@ -2,11 +2,11 @@
 Utility functions for the Vercel Blob Storage API.
 """
 
-import os
 import time
 import random
 import math
 from mimetypes import guess_type
+from .errors import BlobRequestError
 
 _DISALLOWED_PATHNAME_CHARACTERS = ["//"]
 _MAXIMUM_PATHNAME_LENGTH = 950
@@ -33,34 +33,31 @@ def guess_mime_type(url) -> str:
 def validate_pathname(pathname: str) -> None:
     """
     Validates the pathname according to Vercel Blob specifications.
-    
+
     Args:
         pathname (str): The pathname to validate
-        
+
     Raises:
         BlobRequestError: If the pathname is invalid
     """
     if not pathname:
-        from .errors import BlobRequestError
         raise BlobRequestError("pathname is required")
-    
+
     if len(pathname) > _MAXIMUM_PATHNAME_LENGTH:
-        from .errors import BlobRequestError
         raise BlobRequestError(f"pathname is too long, maximum length is {_MAXIMUM_PATHNAME_LENGTH}")
-    
+
     for invalid_character in _DISALLOWED_PATHNAME_CHARACTERS:
         if invalid_character in pathname:
-            from .errors import BlobRequestError
             raise BlobRequestError(f'pathname cannot contain "{invalid_character}", please encode it if needed')
 
 
 def generate_request_id(token):
     """
     Generate a request ID similar to the Vercel Blob JavaScript SDK.
-    
+
     Args:
         token (str): The authentication token
-        
+
     Returns:
         str: A unique request ID
     """

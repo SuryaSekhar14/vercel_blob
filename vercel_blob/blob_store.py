@@ -16,11 +16,11 @@ The source code for this package can be found on GitHub at: https://github.com/S
 import os
 import time
 import concurrent.futures
+from urllib.parse import urlencode
 import requests
 from tqdm import tqdm
-from urllib.parse import urlencode
 
-from .progress import *
+from .progress import _default_colors, ProgressFile
 from .errors import *
 from .utils import *
 
@@ -35,6 +35,9 @@ _DEBUG = True
 
 _MULTIPART_THRESHOLD = 25 * 1024 * 1024  # 25MB
 _MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB
+
+RED = "\033[1;31m"
+NC = "\033[0m"
 
 
 def _get_auth_token_from_env() -> str:
@@ -74,7 +77,7 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
     Returns:
         requests.Response: The response from the request
     """
-   
+
     for attempt in range(1, _MAX_RETRY_REQUEST_RETRIES + 1):
         try:
             if verbose:
@@ -83,8 +86,8 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                     total_size = len(data)
 
                     with tqdm(total=total_size, unit='B', unit_scale=True,
-                            desc=f"{_default_colors.desc}Uploading\033[0m",
-                            bar_format=f"{_default_colors.text}{{l_bar}}\033[0m{_default_colors.bar}{{bar:20}}\033[0m{_default_colors.text}{{r_bar}}\033[0m",
+                            desc=f"{_default_colors.desc}Uploading{NC}",
+                            bar_format=f"{_default_colors.text}{{l_bar}}{NC}{_default_colors.bar}{{bar:20}}{NC}{_default_colors.text}{{r_bar}}{NC}",
                             ncols=80, ascii=" █") as pbar:
                         progress_file = ProgressFile(data, pbar)
 
@@ -104,8 +107,8 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                     if response.status_code not in (502, 503, 504):
                         total_size = int(response.headers.get('content-length', 0))
                         with tqdm(total=total_size, unit='B', unit_scale=True,
-                                desc=f"{_default_colors.desc}Downloading\033[0m",
-                                bar_format=f"{_default_colors.text}{{l_bar}}\033[0m{_default_colors.bar}{{bar:20}}\033[0m{_default_colors.text}{{r_bar}}\033[0m",
+                                desc=f"{_default_colors.desc}Downloading{NC}",
+                                bar_format=f"{_default_colors.text}{{l_bar}}{NC}{_default_colors.bar}{{bar:20}}{NC}{_default_colors.text}{{r_bar}}{NC}",
                                 ncols=80, ascii=" █") as pbar:
                             content = b''
                             for chunk in response.iter_content(chunk_size=8192):
@@ -203,27 +206,27 @@ def _create_multipart_upload(path: str, headers: dict, options: dict) -> dict:
         dict: Response containing uploadId and other metadata
     """
     validate_pathname(path)
-    
+
     mpu_headers = headers.copy()
     mpu_headers['x-mpu-action'] = 'create'
-    
+
     # Add request ID to headers
     token = _get_auth_token(options)
     request_id = generate_request_id(token)
     mpu_headers['x-api-blob-request-id'] = request_id
     mpu_headers['x-api-blob-request-attempt'] = '0'
-    
+
     # Create full URL with query parameters
     query_string = urlencode({'pathname': path}, doseq=True)
     url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?{query_string}"
-    
+
     # Debug the request
     if _DEBUG:
         print("Creating MPU with:")
         print(f"URL: {url}")
         print(f"Headers: {mpu_headers}")
         print(f"Request ID: {request_id}")
-    
+
     try:
         resp = _request_factory(
             f"{_VERCEL_BLOB_API_BASE_URL}/mpu?pathname={path}",
@@ -231,7 +234,7 @@ def _create_multipart_upload(path: str, headers: dict, options: dict) -> dict:
             headers=mpu_headers,
             timeout=options.get('timeout', 10),
         )
-        
+
         if _DEBUG:
             print(f"Response status: {resp.status_code if resp else 'None'}")
             if resp:
@@ -240,7 +243,7 @@ def _create_multipart_upload(path: str, headers: dict, options: dict) -> dict:
                     print(f"Response body: {resp.json()}")
                 except:
                     print("Could not parse response as JSON")
-        
+
         return _response_handler(resp)
     except Exception as e:
         if _DEBUG:
@@ -251,7 +254,7 @@ def _create_multipart_upload(path: str, headers: dict, options: dict) -> dict:
 def _upload_part(path: str, upload_id: str, key: str, part_number: int, data: bytes, headers: dict, options: dict, verbose: bool = False) -> dict:
     """
     Uploads a single part of a multipart upload.
-    
+
     Args:
         path (str): The path where the file will be uploaded
         upload_id (str): The upload ID from create_multipart_upload
@@ -279,7 +282,7 @@ def _upload_part(path: str, upload_id: str, key: str, part_number: int, data: by
     request_id = generate_request_id(token)
     part_headers['x-api-blob-request-id'] = request_id
     part_headers['x-api-blob-request-attempt'] = '0'
-    
+
     url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?pathname={path}"
 
     if _DEBUG:
@@ -435,7 +438,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
 
     if options.get('addRandomSuffix') in ("false", False, "0"):
         headers['x-add-random-suffix'] = "0"
-        
+
     if options.get('allowOverwrite') in ("true", True, "1"):
         headers['x-allow-overwrite'] = "1"
 
@@ -447,38 +450,38 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         if verbose:
             print(f"File size ({len(data) / (1024*1024):.2f}MB) exceeds threshold ({_MULTIPART_THRESHOLD / (1024*1024)}MB), using multipart upload")
             print(f"Using {max_concurrent_uploads} concurrent uploads")
-        
+
         # Create multipart upload
         upload_info = _create_multipart_upload(path, headers, options)
         if _DEBUG:
             print(f"Create multipart upload response: {upload_info}")
-            
+
         if 'uploadId' not in upload_info or 'key' not in upload_info:
             raise BlobRequestError(f"Invalid response from create multipart upload: {upload_info}")
-            
+
         upload_id = upload_info['uploadId']
         key = upload_info['key']
-        
+
         # Split data into chunks and upload parts
         total_parts = (len(data) + _MULTIPART_CHUNK_SIZE - 1) // _MULTIPART_CHUNK_SIZE
-        
+
         if verbose:
             print(f"Uploading {total_parts} parts with {max_concurrent_uploads} concurrent uploads...")
             pbar = tqdm(total=len(data), unit='B', unit_scale=True,
-                       desc=f"{_default_colors.desc}Uploading parts\033[0m",
-                       bar_format=f"{_default_colors.text}{{l_bar}}\033[0m{_default_colors.bar}{{bar:20}}\033[0m{_default_colors.text}{{r_bar}}\033[0m",
+                       desc=f"{_default_colors.desc}Uploading parts{NC}",
+                       bar_format=f"{_default_colors.text}{{l_bar}}{NC}{_default_colors.bar}{{bar:20}}{NC}{_default_colors.text}{{r_bar}}{NC}",
                        ncols=80, ascii=" █")
-        
+
         # Prepare chunks
         chunks = []
         for i in range(total_parts):
             start = i * _MULTIPART_CHUNK_SIZE
             end = min(start + _MULTIPART_CHUNK_SIZE, len(data))
             chunks.append((i + 1, data[start:end]))
-        
+
         # Upload parts in parallel using ThreadPoolExecutor
         parts = [None] * total_parts  # Pre-allocate the parts list
-        
+
         # Function to upload a part and update progress
         def upload_part_with_progress(args):
             part_number, chunk = args
@@ -486,12 +489,12 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
             if verbose:
                 pbar.update(len(chunk))
             return part_number - 1, part_info  # Return index and part info
-        
+
         # Use ThreadPoolExecutor for parallel uploads
         with concurrent.futures.ThreadPoolExecutor(max_workers=max_concurrent_uploads) as executor:
             # Submit all upload tasks
             future_to_part = {executor.submit(upload_part_with_progress, chunk_info): chunk_info[0] for chunk_info in chunks}
-            
+
             # Process completed uploads as they finish
             for future in concurrent.futures.as_completed(future_to_part):
                 try:
@@ -503,14 +506,14 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
                     part_num = future_to_part[future]
                     print(f"Error uploading part {part_num}: {exc}")
                     raise
-        
+
         if verbose:
             pbar.close()
             print("All parts uploaded. Completing multipart upload...")
-        
+
         # Complete multipart upload
         return _complete_multipart_upload(path, upload_id, key, parts, headers, options)
-    
+
     # Regular upload for small files
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/?pathname={path}",
@@ -747,5 +750,5 @@ def set_progress_bar_colours(desc=None, bar=None, text=None):
     try:
         _default_colors.set_colors(desc, bar, text)
     except InvalidColorError as e:
-        print(f"\033[1;31mWarning: Invalid color configuration: {e}\033[0m")
-        print("\033[1;31mUsing default colors instead\033[0m")
+        print(f"{RED}Warning: Invalid color configuration: {e}{NC}")
+        print("{RED}Using default colors instead{NC}")
