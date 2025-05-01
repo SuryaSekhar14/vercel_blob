@@ -43,6 +43,13 @@ jobs:
         source venv/bin/activate
         poetry build
 
+    - name: Upload Build Artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: dist-packages
+        path: dist/
+        retention-days: 7
+
     - name: Install Built Package
       run: |
         source venv/bin/activate
