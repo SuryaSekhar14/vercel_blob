@@ -21,8 +21,8 @@ import requests
 from tqdm import tqdm
 
 from .progress import _default_colors, ProgressFile
-from .errors import *
-from .utils import *
+from .errors import BlobConfigError, BlobRequestError, BlobFileError, InvalidColorError
+from .utils import debug, validate_pathname, generate_request_id, guess_mime_type
 
 _VERCEL_BLOB_API_BASE_URL = 'https://blob.vercel-storage.com'
 _API_VERSION = '10'
@@ -83,13 +83,13 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                 if verbose and method in ['PUT', 'POST'] and 'data' in kwargs:
                     data = kwargs['data']
                     total_size = len(data)
-                    
+
                     with tqdm(total=total_size, unit='B', unit_scale=True,
                             desc=f"{_default_colors.desc}Uploading{NC}",
                             bar_format=f"{_default_colors.text}{{l_bar}}{NC}{_default_colors.bar}{{bar:20}}{NC}{_default_colors.text}{{r_bar}}{NC}",
                             ncols=80, ascii=" █") as pbar:
                         progress_file = ProgressFile(data, pbar)
-                        
+
                         # Use the session for the request
                         response = session.request(
                             method,
@@ -98,10 +98,10 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                             timeout=timeout,
                             **{k:v for k,v in kwargs.items() if k != 'data'}
                         )
-                        
+
                         if response.status_code not in (502, 503, 504):
                             return response
-                
+
                 # Handle download with progress bar
                 elif verbose and method == 'GET':
                     response = session.request(method, url, timeout=timeout, stream=True, **kwargs)
@@ -118,17 +118,17 @@ def _request_factory(url: str, method: str, backoff_factor: int = 0.5, timeout: 
                                     pbar.update(len(chunk))
                             response._content = content
                             return response
-                
+
                 # Simple request without progress tracking
                 else:
                     response = session.request(method, url, timeout=timeout, **kwargs)
                     if response.status_code not in (502, 503, 504):
                         return response
-                        
+
         except requests.exceptions.RequestException as e:
             print(f"Request failed on attempt {attempt} ({e})")
             time.sleep(backoff_factor * attempt)
-            
+
     return None
 
 
@@ -243,8 +243,8 @@ def _create_multipart_upload(path: str, headers: dict, options: dict) -> dict:
             debug(f"Response headers: {resp.headers}")
             try:
                 debug(f"Response body: {resp.json()}")
-            except:
-                debug("Could not parse response as JSON")
+            except Exception as e:
+                debug(f"Could not parse response as JSON: {e}")
 
         return _response_handler(resp)
     except Exception as e:
@@ -361,7 +361,7 @@ def _complete_multipart_upload(path: str, upload_id: str, key: str, parts: list,
     # Create URL for completion
     url = f"{_VERCEL_BLOB_API_BASE_URL}/mpu?pathname={path}"
 
-    debug(f"Completing multipart upload:")
+    debug("Completing multipart upload:")
     debug(f"Parts: {parts}")
 
     # Format the parts array - make sure structure matches what's expected
@@ -607,7 +607,7 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
         )
         return _response_handler(resp)
     else:
-        raise Exception('url must be a string or a list of strings')
+        raise BlobConfigError('url must be a string or a list of strings')
 
 
 def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, verbose: bool = False) -> dict:

@@ -34,7 +34,7 @@ def _hex_to_ansi(hex_color: str) -> str:
         g = int(hex_color[2:4], 16)
         b = int(hex_color[4:6], 16)
     except ValueError as e:
-        raise InvalidColorError(f"Invalid hex color code: {hex_color}. {str(e)}")
+        raise InvalidColorError(f"Invalid hex color code: {hex_color}. {str(e)}") from e
 
     # Convert RGB to ANSI 256 color code
     # Using the formula from https://gist.github.com/MicahElliott/719710
