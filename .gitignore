@@ -6,3 +6,9 @@ dist/
 pvt.py
 .DS_Store
 examples
+
+*.mov
+*.har
+*.json
+*.log
+*.mp4

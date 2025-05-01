@@ -39,7 +39,7 @@ def delete_a_list_of_blobs(url):
 def copy_a_blob(url):
     resp = vercel_blob.copy(url, "copy-test/test.txt", {
         "addRandomSuffix": "true"
-    })
+    }, verbose=True)
     return resp
 
 
