@@ -83,11 +83,11 @@ The put method can be used to upload a blob to the blob store. If the blob is al
 ```python
 def upload_a_blob():
     with open('file.txt', 'rb') as f:
-        resp = vercel_blob.put('test.txt', f.read())
+        resp = vercel_blob.put('test.txt', f.read(), verbose=True)
         print(resp)
 ```
 
-The method takes in the filename as the first argument, and the bytes of the file as the second argument. The third parameters can be the options dictionary.
+The method takes in the filename as the first argument, and the bytes of the file as the second argument. The third parameters can be the options dictionary. The `verbose` parameter (default: False) can be used to show detailed progress information during upload.
 
 The response object would look something like this:
 ```javascript
@@ -154,9 +154,11 @@ The copy method can be used to copy an existing blob to another location inside 
 
 ```python
 def copy_a_blob():
-    resp = vercel_blob.copy("https://surya.public.blob.vercel-storage.com/test.txt", "new-folder/test.txt")
+    resp = vercel_blob.copy("https://surya.public.blob.vercel-storage.com/test.txt", "new-folder/test.txt", verbose=True)
     print(resp)
 ```
+
+The `verbose` parameter (default: False) can be used to show detailed progress information during the copy operation.
 
 The JSON representation of the response should look something like this:
 ```javascript
@@ -173,10 +175,10 @@ If you want to make the client download a file, you just redirect him to the dow
 
 ```python
 def download_a_file_on_the_server():
-    vercel_blob.download_file('blob_url', 'path/to/directory/', {'token': 'my_token'})
+    vercel_blob.download_file('blob_url', 'path/to/directory/', {'token': 'my_token'}, verbose=True)
 ```
 
-The file will be downloaded to the specified directory. If no directory is specified, it will be downloaded to the program's base directory.
+The file will be downloaded to the specified directory. If no directory is specified, it will be downloaded to the program's base directory. The `verbose` parameter (default: False) can be used to show detailed progress information during download.
 
 
 ## Common Issues
