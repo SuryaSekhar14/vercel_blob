@@ -30,7 +30,6 @@ _PAGINATED_LIST_SIZE = 1000
 _DEFAULT_CACHE_AGE = '31536000'
 _MAX_RETRY_REQUEST_RETRIES = 3
 
-_MULTIPART_THRESHOLD = 25 * 1024 * 1024  # 25MB
 _MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB
 
 RED = "\033[1;31m"
@@ -383,7 +382,7 @@ def _complete_multipart_upload(path: str, upload_id: str, key: str, parts: list,
     return _response_handler(resp)
 
 
-def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose: bool = False) -> dict:
+def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose: bool = False, multipart: bool = False) -> dict:
     """
     Uploads the given data to the specified path in the Vercel Blob Store.
     For files larger than 25MB, uses multipart upload.
@@ -442,9 +441,9 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
     debug("Headers: " + str(headers))
 
     # Use multipart upload for large files
-    if len(data) > _MULTIPART_THRESHOLD:
+    if multipart:
         if verbose:
-            debug(f"File size ({len(data) / (1024*1024):.2f}MB) exceeds threshold ({_MULTIPART_THRESHOLD / (1024*1024)}MB), using multipart upload")
+            debug("multipart is set to true, using multipart upload")
             debug(f"Using {max_concurrent_uploads} concurrent uploads")
 
         # Create multipart upload

@@ -354,7 +354,8 @@ def list_all_blobs(cursor=None):
 def upload_a_blob(file_data, filename, add_random_suffix):
     resp = vercel_blob.put(filename, 
                            file_data, 
-                           verbose=True
+                           verbose=True,
+                           multipart=True
                         )
     return resp
 
