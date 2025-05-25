@@ -384,39 +384,31 @@ def _complete_multipart_upload(path: str, upload_id: str, key: str, parts: list,
 
 def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose: bool = False, multipart: bool = False) -> dict:
     """
-    Uploads the given data to the specified path in the Vercel Blob Store.
-    Supports regular uploads for smaller files and multipart uploads for larger files.
-
+    Uploads data to a specified path in the Vercel Blob Store, supporting both regular and multipart uploads.
+    
+    If `multipart` is True, the data is split into 5MB chunks and uploaded in parallel using multiple threads (default 5, configurable via `maxConcurrentUploads` in options). This is recommended for large files. For smaller files or when `multipart` is False, a single PUT request is used.
+    
     Args:
-        path (str): The path inside the blob store, where the data will be uploaded.
-        data (bytes): The data to be uploaded.
-        options (dict, optional): A dictionary with the following optional parameters:
-
-            -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
-            -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "true".
-            -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
-            -> `allowOverwrite` (str, optional): A boolean value to specify if an existing file should be overwritten. Defaults to "false".
-            -> `maxConcurrentUploads` (int, optional): Maximum number of concurrent part uploads for multipart. Defaults to 5.
-        timeout (int, optional): The timeout for the request. Defaults to 10.
-        verbose (bool, optional): Whether to show detailed information during upload. Defaults to False.
-        multipart (bool, optional): Whether to use multipart upload. Defaults to False.
-            If True, the file will be uploaded in chunks. This is recommended for large files.
-            
+        path: The destination path in the blob store.
+        data: The bytes to upload.
+        options: Optional dictionary for upload configuration, including authorization token, random suffix, cache control, overwrite behavior, and maximum concurrent uploads for multipart.
+        timeout: Request timeout in seconds.
+        verbose: If True, displays upload progress and debug information.
+        multipart: If True, uses multipart upload; otherwise, uses regular upload.
+    
     Returns:
-        dict: The response from the Vercel Blob Store API.
-
+        The JSON response from the Vercel Blob Store API.
+    
     Raises:
-        AssertionError: If the type of `path` is not a string object.
-        AssertionError: If the type of `data` is not a bytes object.
-        AssertionError: If the type of `options` is not a dictionary object.
-
+        AssertionError: If `path` is not a string, `data` is not bytes, or `options` is not a dictionary.
+    
     Example (Simple Upload):
         >>> with open('test.txt', 'rb') as f:
-        >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"}, verbose=True)
-
+        ...     put("test.txt", f.read(), {"addRandomSuffix": "true"}, verbose=True)
+    
     Example (Multipart Upload):
         >>> with open('large_video.mp4', 'rb') as f:
-        >>>     put("large_video.mp4", f.read(), multipart=True, verbose=True)
+        ...     put("large_video.mp4", f.read(), multipart=True, verbose=True)
     """
     if options is None:
         options = {}
