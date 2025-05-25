@@ -89,6 +89,15 @@ def upload_a_blob():
 
 The method takes in the filename as the first argument, and the bytes of the file as the second argument. The third parameters can be the options dictionary. The `verbose` parameter (default: False) can be used to show detailed progress information during upload.
 
+For large files, you can enable multipart uploads by passing `multipart=True` to the `put` method. This splits the file into smaller parts, offering resilience against network issues and potentially speeding up the upload process. Vercel Blob Storage supports multipart uploads for files up to 5TB.
+
+```python
+def upload_large_file_multipart():
+    with open('large_video.mp4', 'rb') as f:
+        resp = vercel_blob.put('large_video.mp4', f.read(), multipart=True, verbose=True)
+        print(resp)
+```
+
 The response object would look something like this:
 ```javascript
 pathname: `string`,

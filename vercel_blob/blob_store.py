@@ -385,7 +385,7 @@ def _complete_multipart_upload(path: str, upload_id: str, key: str, parts: list,
 def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose: bool = False, multipart: bool = False) -> dict:
     """
     Uploads the given data to the specified path in the Vercel Blob Store.
-    For files larger than 25MB, uses multipart upload.
+    Supports regular uploads for smaller files and multipart uploads for larger files.
 
     Args:
         path (str): The path inside the blob store, where the data will be uploaded.
@@ -396,9 +396,11 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
             -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "true".
             -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
             -> `allowOverwrite` (str, optional): A boolean value to specify if an existing file should be overwritten. Defaults to "false".
-            -> `maxConcurrentUploads` (int, optional): Maximum number of concurrent part uploads. Defaults to 5.
+            -> `maxConcurrentUploads` (int, optional): Maximum number of concurrent part uploads for multipart. Defaults to 5.
         timeout (int, optional): The timeout for the request. Defaults to 10.
         verbose (bool, optional): Whether to show detailed information during upload. Defaults to False.
+        multipart (bool, optional): Whether to use multipart upload. Defaults to False.
+            If True, the file will be uploaded in chunks. This is recommended for large files.
             
     Returns:
         dict: The response from the Vercel Blob Store API.
@@ -408,9 +410,13 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         AssertionError: If the type of `data` is not a bytes object.
         AssertionError: If the type of `options` is not a dictionary object.
 
-    Example:
+    Example (Simple Upload):
         >>> with open('test.txt', 'rb') as f:
         >>>     put("test.txt", f.read(), {"addRandomSuffix": "true"}, verbose=True)
+
+    Example (Multipart Upload):
+        >>> with open('large_video.mp4', 'rb') as f:
+        >>>     put("large_video.mp4", f.read(), multipart=True, verbose=True)
     """
     if options is None:
         options = {}
