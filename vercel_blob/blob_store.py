@@ -135,7 +135,7 @@ def _response_handler(resp: requests.Response | None) -> dict:
     if resp is None:
         raise BlobRequestError("Request failed after retries. Please try again.")
     if resp.status_code != 200:
-        raise BlobRequestError(f"An error occoured: {resp.json()}")
+        raise BlobRequestError(f"API request error (status {resp.status_code}): {resp.json()}")
     else:
         return resp.json()
 
@@ -457,7 +457,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         debug(f"Create multipart upload response: {upload_info}")
 
         if 'uploadId' not in upload_info or 'key' not in upload_info:
-            raise BlobRequestError(f"Invalid response from create multipart upload: {upload_info}")
+            raise BlobRequestError(f"Invalid response from create multipart upload (missing uploadId or key): {upload_info}. Check your authorization token and network connection.")
 
         upload_id = upload_info['uploadId']
         key = upload_info['key']
@@ -612,7 +612,7 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
         )
         return _response_handler(resp)
     else:
-        raise BlobConfigError('url must be a string or a list of strings')
+        raise BlobConfigError('url must be a string or a list of strings. Example: "https://example.com/file.txt" or ["https://example.com/file1.txt", "https://example.com/file2.txt"]')
 
 
 def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, verbose: bool = False) -> dict:
@@ -708,8 +708,8 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
     sanitized_path = path.lstrip('/')
     path_to_save = script_path + sanitized_path
     if path_to_save != script_path:
-        assert path.endswith('/'), "path must be a valid directory path, ending with '/'"
-        assert os.path.exists(path_to_save), "path must be a valid directory path"
+        assert path.endswith('/'), "download path must be a valid directory path, ending with '/'"
+        assert os.path.exists(path_to_save), "download path must be a valid directory path"
 
     debug(f"Downloading file from {url} to {path_to_save}")
 
@@ -725,10 +725,10 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
                 f.write(resp)
         except FileNotFoundError as e:
             debug(f"An error occurred. Please try again. Error: {e}")
-            raise BlobFileError("The directory must exist before downloading the file. Please create the directory and try again.") from e
+            raise BlobFileError(f"Download directory '{path_to_save}' does not exist. Please create this directory before downloading the file.") from e
     except Exception as e:
-        debug(f"An error occurred. Please try again. Error: {e}")
-        raise BlobRequestError("An error occurred. Please try again.") from e
+        debug(f"Error while downloading file from {url}: {e}")
+        raise BlobRequestError(f"Failed to download file from {url}. Error: {str(e)}") from e
 
 
 def set_progress_bar_colours(desc=None, bar=None, text=None):

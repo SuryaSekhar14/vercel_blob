@@ -44,7 +44,7 @@ def validate_pathname(pathname: str) -> None:
         BlobRequestError: If the pathname is invalid
     """
     if not pathname:
-        raise BlobRequestError("pathname is required")
+        raise BlobRequestError("pathname is required and cannot be empty")
 
     if len(pathname) > _MAXIMUM_PATHNAME_LENGTH:
         raise BlobRequestError(f"pathname is too long, maximum length is {_MAXIMUM_PATHNAME_LENGTH}")

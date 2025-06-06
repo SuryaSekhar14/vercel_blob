@@ -1,5 +1,3 @@
-# I have no idea how to write pytest modules, please bear with me
-
 import dotenv
 import vercel_blob
 
