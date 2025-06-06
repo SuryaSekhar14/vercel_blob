@@ -107,13 +107,13 @@ url: `string`
 downloadUrl: `string`
 ```
 
-You would notice that the blob uploaded automatically has a random suffix attached to it. To remove that, just add the 'addRandomSuffix' parameter to the options dictionary. Here's an example:
+By default, blobs are uploaded without a random suffix. If you want to add a random suffix to prevent overwriting existing files, you can set the 'addRandomSuffix' parameter to "true" in the options dictionary. Here's an example:
 
 ```python
 def upload_a_blob():
     with open('file.txt', 'rb') as f:
         resp = vercel_blob.put('test.txt', f.read(), {
-                "addRandomSuffix": "false",
+                "addRandomSuffix": "true",
             })
         print(resp)
 ```

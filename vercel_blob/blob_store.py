@@ -396,7 +396,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         options (dict, optional): A dictionary with the following optional parameters:
 
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
-            -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "true".
+            -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "false".
             -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
             -> `allowOverwrite` (str, optional): A boolean value to specify if an existing file should be overwritten. Defaults to "false".
             -> `maxConcurrentUploads` (int, optional): Maximum number of concurrent part uploads for multipart. Defaults to 5.
