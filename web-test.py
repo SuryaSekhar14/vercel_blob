@@ -174,6 +174,8 @@ def generate_index_html(blobs_data=None):
                         <input type="file" id="file" name="file" required>
                         <input type="checkbox" id="addRandomSuffix" name="addRandomSuffix">
                         <label for="addRandomSuffix">Add random suffix</label>
+                        <input type="checkbox" id="allowOverwrite" name="allowOverwrite">
+                        <label for="allowOverwrite">Allow overwrite</label>
                         <input type="submit" value="Upload">
                     </form>
                 </div>
@@ -351,9 +353,13 @@ def list_all_blobs(cursor=None):
     })
     return blob_list
 
-def upload_a_blob(file_data, filename, add_random_suffix):
+def upload_a_blob(file_data, filename, add_random_suffix, allow_overwrite):
     resp = vercel_blob.put(filename, 
                            file_data, 
+                           {
+                               "addRandomSuffix": "true" if add_random_suffix else "false",
+                               "allowOverwrite": "true"
+                           },
                            verbose=True,
                            multipart=True
                         )
@@ -393,7 +399,8 @@ def upload():
         return "No selected file", 400
     
     add_random_suffix = 'addRandomSuffix' in request.form
-    result = upload_a_blob(file.read(), file.filename, add_random_suffix)
+    allow_overwrite = 'allowOverwrite' in request.form
+    result = upload_a_blob(file.read(), file.filename, add_random_suffix, allow_overwrite)
     return result_template("Upload Results", result)
 
 @app.route('/metadata')

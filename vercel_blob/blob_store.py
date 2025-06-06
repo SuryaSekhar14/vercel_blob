@@ -438,8 +438,8 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         "x-cache-control-max-age": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
     }
 
-    if options.get('addRandomSuffix') in ("false", False, "0"):
-        headers['x-add-random-suffix'] = "0"
+    if options.get('addRandomSuffix') in ("true", True, "1"):
+        headers['x-add-random-suffix'] = "1"
 
     if options.get('allowOverwrite') in ("true", True, "1"):
         headers['x-allow-overwrite'] = "1"

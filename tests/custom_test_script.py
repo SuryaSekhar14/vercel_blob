@@ -16,9 +16,11 @@ def list_all_blobs(cursor=None):
 def upload_a_blob(file_path):
     with open(file_path, 'rb') as f:
         resp = vercel_blob.put('test-custom-testing-script.txt', f.read(), {
-                "addRandomSuffix": "false",
+                "addRandomSuffix": "true",
             },
-            verbose=True)
+            verbose=True,
+            multipart=True,
+        )
         return resp
 
 
