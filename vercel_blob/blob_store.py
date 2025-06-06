@@ -30,6 +30,9 @@ _PAGINATED_LIST_SIZE = 1000
 _DEFAULT_CACHE_AGE = '31536000'
 _MAX_RETRY_REQUEST_RETRIES = 3
 
+_INVALID_OPTIONS_TYPE_MSG = "Options passed must be a Dictionary Object"
+_DEBUG_HEADERS_MSG = "Headers: "
+
 _MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB
 
 RED = "\033[1;31m"
@@ -166,7 +169,7 @@ def list(options: dict = None, timeout: int = 10) -> dict:
     if options is None:
         options = {}
 
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     headers = {
         "authorization": f'Bearer {_get_auth_token(options)}',
@@ -183,7 +186,7 @@ def list(options: dict = None, timeout: int = 10) -> dict:
     if options.get('mode'):
         params['mode'] = options['mode']
 
-    debug("Headers: " + str(headers))
+    debug(_DEBUG_HEADERS_MSG + str(headers))
 
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}",
@@ -423,7 +426,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
 
     assert type(path) == type(""), "path must be a string object"
     assert type(data) == type(b""), "data must be a bytes object"
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     # Get max concurrent uploads (default to 5)
     max_concurrent_uploads = options.get('maxConcurrentUploads', 5)
@@ -444,7 +447,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
     if options.get('allowOverwrite') in ("true", True, "1"):
         headers['x-allow-overwrite'] = "1"
 
-    debug("Headers: " + str(headers))
+    debug(_DEBUG_HEADERS_MSG + str(headers))
 
     # Use multipart upload for large files
     if multipart:
@@ -551,14 +554,14 @@ def head(url: str, options: dict = None, timeout: int = 10) -> dict:
         options = {}
 
     assert type(url) == type(""), "url must be a string object"
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     headers = {
         "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
     }
 
-    debug("Headers: " + str(headers))
+    debug(_DEBUG_HEADERS_MSG + str(headers))
 
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/?url={url}",
@@ -593,7 +596,7 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
     if options is None:
         options = {}
 
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     headers = {
         "authorization": f'Bearer {_get_auth_token(options)}',
@@ -601,7 +604,7 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
     }
 
     if type(url) == type("") or (type(url) == type([]) and all(isinstance(u, str) for u in url)):
-        debug("Headers: " + str(headers))
+        debug(_DEBUG_HEADERS_MSG + str(headers))
 
         resp = _request_factory(
             f"{_VERCEL_BLOB_API_BASE_URL}/delete",
@@ -646,7 +649,7 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
 
     assert type(blob_url) == type(""), "blob_url must be a string object"
     assert type(to_path) == type(""), "to_path must be a string object"
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     headers = {
         "access": "public",
@@ -659,7 +662,7 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
     if options.get('addRandomSuffix') != None:
         headers['x-add-random-suffix'] = "1"
 
-    debug("Headers: " + str(headers))
+    debug(_DEBUG_HEADERS_MSG + str(headers))
 
     to_path_encoded = requests.utils.quote(to_path)
     resp = _request_factory(
@@ -702,7 +705,7 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
 
     assert type(url) == type(""), "url must be a string object"
     assert type(path) == type(""), "path must be a string object"
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     script_path = _get_script_path()
     sanitized_path = path.lstrip('/')
