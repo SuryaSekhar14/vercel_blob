@@ -16,7 +16,8 @@ def list_all_blobs(cursor=None):
 def upload_a_blob(file_path):
     with open(file_path, 'rb') as f:
         resp = vercel_blob.put('test-custom-testing-script.txt', f.read(), {
-                "addRandomSuffix": "true",
+                "addRandomSuffix": "false",
+                "allowOverwrite": "true"
             },
             verbose=True,
             multipart=True,
