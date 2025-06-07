@@ -27,6 +27,14 @@ print("Using vercel_blob version:", vercel_blob.__version__)
 print("Token present:", "yes" if os.environ.get('BLOB_READ_WRITE_TOKEN') else "no")
 print("VERCEL_BLOB_DEBUG Debug mode:", os.environ.get('VERCEL_BLOB_DEBUG'))
 
+def format_size(size):
+    if size < 1024:
+        return f"{size} bytes"
+    elif size < 1024*1024:
+        return f"{size/1024:.2f} KB"
+    else:
+        return f"{size/(1024*1024):.2f} MB"
+
 # Function to generate the index HTML with blob list
 def generate_index_html(blobs_data=None):
     blobs_html = ""
@@ -37,7 +45,7 @@ def generate_index_html(blobs_data=None):
             url = blob.get("url", "")
             path = blob.get("pathname", url)
             size = blob.get("size", 0)
-            size_str = f"{size} bytes" if size < 1024 else f"{size/1024:.2f} KB" if size < 1024*1024 else f"{size/(1024*1024):.2f} MB"
+            size_str = format_size(size)
             
             # Use data-attribute to store URL for copying
             blobs_html += f"""
@@ -174,6 +182,8 @@ def generate_index_html(blobs_data=None):
                         <input type="file" id="file" name="file" required>
                         <input type="checkbox" id="addRandomSuffix" name="addRandomSuffix">
                         <label for="addRandomSuffix">Add random suffix</label>
+                        <input type="checkbox" id="allowOverwrite" name="allowOverwrite">
+                        <label for="allowOverwrite">Allow overwrite</label>
                         <input type="submit" value="Upload">
                     </form>
                 </div>
@@ -351,9 +361,13 @@ def list_all_blobs(cursor=None):
     })
     return blob_list
 
-def upload_a_blob(file_data, filename, add_random_suffix):
+def upload_a_blob(file_data, filename, add_random_suffix, allow_overwrite):
     resp = vercel_blob.put(filename, 
                            file_data, 
+                           {
+                               "addRandomSuffix": "true" if add_random_suffix else "false",
+                               "allowOverwrite": "true" if allow_overwrite else "false"
+                           },
                            verbose=True,
                            multipart=True
                         )
@@ -393,7 +407,8 @@ def upload():
         return "No selected file", 400
     
     add_random_suffix = 'addRandomSuffix' in request.form
-    result = upload_a_blob(file.read(), file.filename, add_random_suffix)
+    allow_overwrite = 'allowOverwrite' in request.form
+    result = upload_a_blob(file.read(), file.filename, add_random_suffix, allow_overwrite)
     return result_template("Upload Results", result)
 
 @app.route('/metadata')
@@ -417,7 +432,7 @@ def delete():
     try:
         result = delete_a_blob(url)
         print(f"Delete result: {result}")
-        return redirect(f'/?message=Blob%20deleted%20successfully&type=success')
+        return redirect('/')
     except Exception as e:
         error_message = str(e).replace(' ', '%20')
         return redirect(f'/?message=Error:%20{error_message}&type=error')

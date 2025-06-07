@@ -30,6 +30,9 @@ _PAGINATED_LIST_SIZE = 1000
 _DEFAULT_CACHE_AGE = '31536000'
 _MAX_RETRY_REQUEST_RETRIES = 3
 
+_INVALID_OPTIONS_TYPE_MSG = "Options passed must be a Dictionary Object"
+_DEBUG_HEADERS_MSG = "Headers: "
+
 _MULTIPART_CHUNK_SIZE = 5 * 1024 * 1024  # 5MB
 
 RED = "\033[1;31m"
@@ -135,7 +138,7 @@ def _response_handler(resp: requests.Response | None) -> dict:
     if resp is None:
         raise BlobRequestError("Request failed after retries. Please try again.")
     if resp.status_code != 200:
-        raise BlobRequestError(f"An error occoured: {resp.json()}")
+        raise BlobRequestError(f"API request error (status {resp.status_code}): {resp.json()}")
     else:
         return resp.json()
 
@@ -166,7 +169,7 @@ def list(options: dict = None, timeout: int = 10) -> dict:
     if options is None:
         options = {}
 
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     headers = {
         "authorization": f'Bearer {_get_auth_token(options)}',
@@ -183,7 +186,7 @@ def list(options: dict = None, timeout: int = 10) -> dict:
     if options.get('mode'):
         params['mode'] = options['mode']
 
-    debug("Headers: " + str(headers))
+    debug(_DEBUG_HEADERS_MSG + str(headers))
 
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}",
@@ -393,7 +396,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         options (dict, optional): A dictionary with the following optional parameters:
 
             -> `token` (str, optional): A string containing the token to be used for authorization. If not provided, the token will be read from the environment variable.
-            -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "true".
+            -> `addRandomSuffix` (str, optional): A boolean value to specify if a random suffix should be added to the path. Defaults to "false".
             -> `cacheControlMaxAge` (str, optional): A string containing the cache control max age value. Defaults to "31536000".
             -> `allowOverwrite` (str, optional): A boolean value to specify if an existing file should be overwritten. Defaults to "false".
             -> `maxConcurrentUploads` (int, optional): Maximum number of concurrent part uploads for multipart. Defaults to 5.
@@ -423,7 +426,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
 
     assert type(path) == type(""), "path must be a string object"
     assert type(data) == type(b""), "data must be a bytes object"
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     # Get max concurrent uploads (default to 5)
     max_concurrent_uploads = options.get('maxConcurrentUploads', 5)
@@ -438,13 +441,13 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         "x-cache-control-max-age": options.get('cacheControlMaxAge', _DEFAULT_CACHE_AGE),
     }
 
-    if options.get('addRandomSuffix') in ("false", False, "0"):
-        headers['x-add-random-suffix'] = "0"
+    if options.get('addRandomSuffix') in ("true", True, "1"):
+        headers['x-add-random-suffix'] = "1"
 
     if options.get('allowOverwrite') in ("true", True, "1"):
         headers['x-allow-overwrite'] = "1"
 
-    debug("Headers: " + str(headers))
+    debug(_DEBUG_HEADERS_MSG + str(headers))
 
     # Use multipart upload for large files
     if multipart:
@@ -457,7 +460,7 @@ def put(path: str, data: bytes, options: dict = None, timeout: int = 10, verbose
         debug(f"Create multipart upload response: {upload_info}")
 
         if 'uploadId' not in upload_info or 'key' not in upload_info:
-            raise BlobRequestError(f"Invalid response from create multipart upload: {upload_info}")
+            raise BlobRequestError(f"Invalid response from create multipart upload (missing uploadId or key): {upload_info}. Check your authorization token and network connection.")
 
         upload_id = upload_info['uploadId']
         key = upload_info['key']
@@ -551,14 +554,14 @@ def head(url: str, options: dict = None, timeout: int = 10) -> dict:
         options = {}
 
     assert type(url) == type(""), "url must be a string object"
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     headers = {
         "authorization": f'Bearer {_get_auth_token(options)}',
         "x-api-version": _API_VERSION,
     }
 
-    debug("Headers: " + str(headers))
+    debug(_DEBUG_HEADERS_MSG + str(headers))
 
     resp = _request_factory(
         f"{_VERCEL_BLOB_API_BASE_URL}/?url={url}",
@@ -593,7 +596,7 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
     if options is None:
         options = {}
 
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     headers = {
         "authorization": f'Bearer {_get_auth_token(options)}',
@@ -601,7 +604,7 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
     }
 
     if type(url) == type("") or (type(url) == type([]) and all(isinstance(u, str) for u in url)):
-        debug("Headers: " + str(headers))
+        debug(_DEBUG_HEADERS_MSG + str(headers))
 
         resp = _request_factory(
             f"{_VERCEL_BLOB_API_BASE_URL}/delete",
@@ -612,7 +615,7 @@ def delete(url: any, options: dict = None, timeout: int = 10) -> dict:
         )
         return _response_handler(resp)
     else:
-        raise BlobConfigError('url must be a string or a list of strings')
+        raise BlobConfigError('url must be a string or a list of strings. Example: "https://example.com/file.txt" or ["https://example.com/file1.txt", "https://example.com/file2.txt"]')
 
 
 def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, verbose: bool = False) -> dict:
@@ -646,7 +649,7 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
 
     assert type(blob_url) == type(""), "blob_url must be a string object"
     assert type(to_path) == type(""), "to_path must be a string object"
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     headers = {
         "access": "public",
@@ -659,7 +662,7 @@ def copy(blob_url: str, to_path: str, options: dict = None, timeout: int = 10, v
     if options.get('addRandomSuffix') != None:
         headers['x-add-random-suffix'] = "1"
 
-    debug("Headers: " + str(headers))
+    debug(_DEBUG_HEADERS_MSG + str(headers))
 
     to_path_encoded = requests.utils.quote(to_path)
     resp = _request_factory(
@@ -702,14 +705,14 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
 
     assert type(url) == type(""), "url must be a string object"
     assert type(path) == type(""), "path must be a string object"
-    assert type(options) == type({}), "Options passed must be a Dictionary Object"
+    assert type(options) == type({}), _INVALID_OPTIONS_TYPE_MSG
 
     script_path = _get_script_path()
     sanitized_path = path.lstrip('/')
     path_to_save = script_path + sanitized_path
     if path_to_save != script_path:
-        assert path.endswith('/'), "path must be a valid directory path, ending with '/'"
-        assert os.path.exists(path_to_save), "path must be a valid directory path"
+        assert path.endswith('/'), "download path must be a valid directory path, ending with '/'"
+        assert os.path.exists(path_to_save), "download path must be a valid directory path"
 
     debug(f"Downloading file from {url} to {path_to_save}")
 
@@ -725,10 +728,10 @@ def download_file(url: str, path: str = '', options: dict = None, timeout: int =
                 f.write(resp)
         except FileNotFoundError as e:
             debug(f"An error occurred. Please try again. Error: {e}")
-            raise BlobFileError("The directory must exist before downloading the file. Please create the directory and try again.") from e
+            raise BlobFileError(f"Download directory '{path_to_save}' does not exist. Please create this directory before downloading the file.") from e
     except Exception as e:
-        debug(f"An error occurred. Please try again. Error: {e}")
-        raise BlobRequestError("An error occurred. Please try again.") from e
+        debug(f"Error while downloading file from {url}: {e}")
+        raise BlobRequestError(f"Failed to download file from {url}. Error: {str(e)}") from e
 
 
 def set_progress_bar_colours(desc=None, bar=None, text=None):
